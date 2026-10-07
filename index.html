@@ -3,25 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LoL Micro Lab — Camera v1.0</title>
+  <title>LoL Micro Lab — Movement v0.1</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="game"></div>
   <div id="hud">
     <section class="panel intro">
-      <div class="eyebrow">LOL MICRO LAB • CAMERA COMPLETE</div>
-      <h1>Camera v1.0</h1>
-      <p>LoLのPoint & Click操作を基準にした固定カメラ仕様。</p>
+      <div class="eyebrow">LOL MICRO LAB • MOVEMENT PASS</div>
+      <h1>Movement v0.1</h1>
+      <p>Camera v1.0を固定したまま、LoLの右クリック移動を再現する段階。</p>
     </section>
 
     <section class="panel state">
+      <div><span>MOVE SPEED</span><b>335</b></div>
+      <div><span>ORDER</span><b id="moveState">IDLE</b></div>
       <div><span>CAMERA</span><b id="cameraState">UNLOCKED</b></div>
-      <div><span>ZOOM</span><b id="zoomState">MAX</b></div>
     </section>
 
     <section class="panel controls">
-      <div><kbd>Right Click</kbd><span>移動</span></div>
+      <div><kbd>Right Click</kbd><span>Move Command</span></div>
+      <div><kbd>Hold RMB</kbd><span>移動先を連続更新</span></div>
+      <div><kbd>S</kbd><span>Stop Command</span></div>
       <div><kbd>画面端</kbd><span>カメラ移動</span></div>
       <div><kbd>MMB Drag</kbd><span>マップを掴んで移動</span></div>
       <div><kbd>Space</kbd><span>押している間、自分を追従</span></div>
@@ -29,7 +32,7 @@
       <div><kbd>Wheel</kbd><span>Zoom In / Out</span></div>
     </section>
 
-    <div id="centerHint">SPACE — CENTER ON CHAMPION</div>
+    <div id="centerHint">RMB — MOVE • S — STOP</div>
   </div>
 
   <script type="importmap">
