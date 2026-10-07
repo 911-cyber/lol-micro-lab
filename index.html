@@ -3,23 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LoL Micro Lab — Combat Core v0.5</title>
+  <title>LoL Micro Lab — Training Suite v0.8</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="game"></div>
   <div id="hud">
     <section class="panel intro">
-      <div class="eyebrow">LOL MICRO LAB • COMBAT CORE</div>
-      <h1>Combat Core v0.5</h1>
-      <p>移動・AA・Attack Move・Windupキャンセル・Kiting Challenge。</p>
+      <div class="eyebrow">LOL MICRO LAB • TRAINING SUITE</div>
+      <h1>Training Suite v0.8</h1>
+      <p>Kiting / Target Switch / Spacing / Dodge / CS のコア練習。</p>
     </section>
 
     <section class="panel state">
-      <div><span>CAMERA</span><b id="cameraState">UNLOCKED</b></div>
+      <div><span>MODE</span><b id="modeState">FREE</b></div>
       <div><span>ORDER</span><b id="orderState">IDLE</b></div>
-      <div><span>AS</span><b id="asState">0.75</b></div>
-      <div><span>RANGE</span><b id="rangeState">550</b></div>
+      <div><span>AS</span><b>0.75</b></div>
+      <div><span>RANGE</span><b>550</b></div>
+    </section>
+
+    <section class="panel modes">
+      <div><kbd>1 / K</kbd><span>Kiting</span></div>
+      <div><kbd>2</kbd><span>Target Switch</span></div>
+      <div><kbd>3</kbd><span>Spacing</span></div>
+      <div><kbd>4</kbd><span>Dodge</span></div>
+      <div><kbd>5</kbd><span>CS / Last Hit</span></div>
+      <div><kbd>Esc</kbd><span>Free Mode</span></div>
     </section>
 
     <section class="panel controls">
@@ -28,7 +37,6 @@
       <div><kbd>A → LMB</kbd><span>Attack Move</span></div>
       <div><kbd>Shift + RMB</kbd><span>Attack Move</span></div>
       <div><kbd>S</kbd><span>Stop</span></div>
-      <div><kbd>K</kbd><span>30秒 Kiting Challenge</span></div>
       <div><kbd>Space / Y</kbd><span>Center / Camera Lock</span></div>
     </section>
 
@@ -36,14 +44,15 @@
       <div><span>HITS</span><b id="hitsState">0</b></div>
       <div><span>CANCELS</span><b id="cancelState">0</b></div>
       <div><span>CLEAN KITES</span><b id="kiteState">0</b></div>
-      <div><span>DPS</span><b id="dpsState">0</b></div>
+      <div><span>DODGES</span><b id="dodgeState">0</b></div>
+      <div><span>CS</span><b id="csState">0</b></div>
       <div><span>SCORE</span><b id="scoreState">0</b></div>
     </section>
 
     <section class="target-card" id="targetCard">
-      <div class="target-name">TRAINING DUMMY</div>
+      <div class="target-name" id="targetName">NO TARGET</div>
       <div class="hp-shell"><div class="hp-fill enemy" id="enemyHpFill"></div></div>
-      <div class="hp-text" id="enemyHpText">700 / 700</div>
+      <div class="hp-text" id="enemyHpText">—</div>
     </section>
 
     <section class="player-card">
@@ -51,8 +60,8 @@
       <div class="player-row"><b>YOU</b><span id="playerHpText">100 / 100</span></div>
     </section>
 
-    <div id="modeBanner">A — ATTACK MOVE</div>
-    <div id="challengeBanner">K — START KITING CHALLENGE</div>
+    <div id="modeBanner">FREE MODE</div>
+    <div id="objectiveBanner">1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS</div>
     <div id="toast"></div>
   </div>
 
