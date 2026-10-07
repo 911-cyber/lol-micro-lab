@@ -18,8 +18,9 @@ export function makeMinionHpBar(unit) {
     depthWrite: false
   });
   const fill = new THREE.Sprite(fillMat);
-  bg.scale.set(1.64, .155, 1);
-  fill.scale.set(1.49, .088, 1);
+  const width=unit.type==='minion'?1.05:1.49;
+  bg.scale.set(width+.15,.135,1);
+  fill.scale.set(width,.08,1);
   bg.renderOrder = 30;
   fill.renderOrder = 31;
   root.add(bg, fill);
@@ -28,19 +29,19 @@ export function makeMinionHpBar(unit) {
     root,
     bg,
     fill,
-    fillMat
+    fillMat,width
   };
   updateMinionHpBar(unit);
 }
 export function updateMinionHpBar(unit) {
   if (!unit.hpBar) return;
   const ratio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
-  const y = unit.type==='tower'?4.5:unit.type!=='minion' ? unit.group.userData.profile?3.65:2.45 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
+  const y = unit.type==='tower'?4.5:unit.type!=='minion' ? unit.group.userData.profile?3.65:2.45 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.55 : 1.45;
   unit.hpBar.root.position.set(unit.group.position.x, y, unit.group.position.z);
   unit.hpBar.root.quaternion.copy(state.camera.quaternion);
   unit.hpBar.root.visible = unit.alive && unit.group.visible;
-  unit.hpBar.fill.scale.x = 1.49 * ratio;
-  unit.hpBar.fill.position.x = -.745 * (1 - ratio);
+  unit.hpBar.fill.scale.x = unit.hpBar.width * ratio;
+  unit.hpBar.fill.position.x = -unit.hpBar.width/2 * (1-ratio);
 }
 export function updateEnemyHpBars(){
   for(const enemy of [...state.enemies,...state.alliedMinions]){if(enemy.type!=='minion'&&!enemy.hpBar&&enemy.alive&&enemy.group.visible)makeMinionHpBar(enemy);updateMinionHpBar(enemy);}

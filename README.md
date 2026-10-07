@@ -27,7 +27,7 @@
 
 ## 対戦
 
-- 近接3体・遠隔3体のウェーブが双方から継続出現。ミニオンへのラストヒット、チャンピオンを攻撃した際のミニオン・タワー反撃を実装。
+- 盾・武器の前衛3体、ローブ・杖の後衛3体。タワー奥の拠点から30秒間隔で歩いて来ます。前後列の間隔は4.8、横は1.7、接近時も約1.3の中心間隔を保ちます。レーン全長は80。ミニオンへのラストヒット、チャンピオンを攻撃した際のミニオン・タワー反撃を実装。
 - BOTはCS、距離維持、可視の弾への反応、Q／W／E／R、マナ、AAの発射前停止を持ちます。反応は難易度別で、カーソルや将来の入力を読みません。
 - 死亡は5秒で復活。単独のタワー攻撃は軽減、ミニオンを伴うAAでタワーを壊します。
 - ラウンド結果にはCS、取り逃し、被弾、AAキャンセルに応じたコーチングを表示。会話型AIはこのUIには出していません。
@@ -41,9 +41,10 @@ Three.js 0.180.0と実際の座標・衝突判定を使う統合テスト：
 ```
 node --experimental-vm-modules tests/controls.test.cjs /path/to/three.module.js
 node --experimental-vm-modules tests/duel.test.cjs /path/to/three.module.js
+node --experimental-vm-modules tests/minions.test.cjs /path/to/three.module.js
 ```
 
-確認記録は `CONTROLS-TEST-RESULTS.json` と `DUEL-TEST-RESULTS.json`。WebGL描画とブラウザー上の操作は別途実画面で確認。
+確認記録は `CONTROLS-TEST-RESULTS.json` と `DUEL-TEST-RESULTS.json` と `MINION-TEST-RESULTS.json`。WebGL描画とブラウザー上の操作は別途実画面で確認。
 
 ## LoLとの違い
 
@@ -51,8 +52,10 @@ node --experimental-vm-modules tests/duel.test.cjs /path/to/three.module.js
 
 基礎マナ・自然回復・ランク1のマナ消費と待ち時間は取得済みのRiot Data Dragon 16.20.1から静的データ化。チャージの回復時間などクライアント専用情報までこのデータだけで保証できません。
 
-カメラは俯角56度、水平旋回−45度、垂直画角40度の透視投影。45度はこの実装でレーンを斜めに映すための旋回角で、LoL公式の俯角を意味しません。Riotの公開資料に確定的なカメラ角度の数値は見つからなかったため、公式の描画例を参考に操作しやすい配置を選択しました。
+カメラは俯角52度、水平旋回−57度、垂直画角40度の透視投影。この角度は添付のレーン戦画像に寄せた実装上の選択値で、LoL公式の俯角を意味しません。Riotの公開資料に確定的なカメラ角度の数値は見つからなかったため、公式の描画例を参考に操作しやすい配置を選択しました。
 
 参照： [Riotの描画パイプライン](https://www.riotgames.com/en/news/trip-down-lol-graphics-pipeline)、[Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon)、[公式キー設定ガイド](https://support.riotgames.com/en-us/league-of-legends/performance/hotkeys-keybindings-faq)。
 
 非公式ファン制作。Riot Games非公認。
+
+

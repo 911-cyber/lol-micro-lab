@@ -42,8 +42,8 @@ export function initializeGame() {
   state.renderer.outputColorSpace = THREE.SRGBColorSpace;
   state.game.appendChild(state.renderer.domElement);
   state.CAMERA_FOV = 40;
-  state.CAMERA_PITCH_DEG = 56;
-  state.CAMERA_DISTANCE = 30;
+  state.CAMERA_PITCH_DEG = 52;
+  state.CAMERA_DISTANCE = 29;
   state.CAMERA_PAN_SPEED = 18;
   state.EDGE_SCROLL_PX = 14;
   state.WORLD_UNITS_PER_LOL_UNIT = 0.01;
