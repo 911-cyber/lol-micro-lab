@@ -73,6 +73,7 @@ export function pickEnemy(x, y) {
   let best = null,
     bestDist = Infinity;
   for (const e of livingEnemies()) {
+    if(state.targetChampionsOnly&&e.type!=='duelist')continue;
     const hits = state.raycaster.intersectObject(e.group, true);
     if (hits.length && hits[0].distance < bestDist) {
       best = e;
@@ -118,21 +119,4 @@ export function resetEntities() {
   state.activeTarget = state.mainDummy;
   state.dangerRing.visible = false;
   state.rangeRing.visible = false;
-}
-export function respawnEnemies(now) {
-  if (state.mode==='DUEL') return;
-  if (state.mode === state.MODE.CS || state.mode === state.MODE.LANE || state.mode === state.MODE.DODGE) return;
-  for (const e of state.enemies) {
-    if(e.type==='caster')continue;
-    if (e.alive || now < e.respawnAt) continue;
-    e.alive = true;
-    e.group.visible = true;
-    e.hp = e.maxHp;
-    if (state.mode === state.MODE.TARGET) {
-      e.group.position.x = THREE.MathUtils.randFloat(4, 11);
-      e.group.position.z = THREE.MathUtils.randFloat(-4, 6);
-    } else if (e === state.mainDummy) {
-      e.group.position.set(8, 0, -2);
-    }
-  }
 }

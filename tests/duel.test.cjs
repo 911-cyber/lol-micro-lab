@@ -1,4 +1,4 @@
-const assert=require('assert/strict'),fs=require('fs'),path=require('path');const {pathToFileURL}=require('url');const {game}=require('./lane.test.cjs');
+const assert=require('assert/strict'),fs=require('fs'),path=require('path');const {pathToFileURL}=require('url');const {game}=require('./harness.cjs');
 (async()=>{
  const THREE=await import(pathToFileURL(path.resolve(process.argv[2]))),g=await game(THREE),s=g.s,checks=[];
  const pass=n=>{checks.push(n);console.log('PASS',n);};
@@ -23,7 +23,6 @@ const assert=require('assert/strict'),fs=require('fs'),path=require('path');cons
  for(let i=0;i<3;i++){d=await launch(i);g.tick(200);assert(s.skillshotsFired>0);}pass('all three difficulties engage with reaction and aim variation');
  d=await launch();for(const a of s.alliedMinions){a.alive=false;a.group.visible=false;}for(const e of s.enemies.filter(e=>e.type==='minion'))e.group.position.set(-13,0,0);d.bot.group.position.set(-11,0,1);s.player.position.set(-20,0,0);d.blue.hp=150;d.nextWave=Infinity;d.nextQ=Infinity;g.tick(240);assert.equal(d.phase,'items');assert.equal(d.wins[1],1);pass('a bot-led wave actually destroys the defending tower through normal combat');
  for(const id of ['Ashe','Caitlyn','Jinx','Jhin','Ezreal','Lucian','Vayne','MissFortune','Varus','Kaisa']){s.lobbyMode='DUEL';s.lobbyChampion=id;await g.call('lobby','launchTraining');g.tick(80);assert.equal(s.duel.phase,'play');assert.equal(s.selectedChampion.id,id);}pass('all ten selectable champions can enter and simulate the duel');
- s.lobbyMode='CS';await g.call('lobby','launchTraining');assert.equal(s.duel,null);assert(s.player.visible);assert.equal(s.alliedMinions.length,6);assert(g.dom.get('#duelPanel').hidden);
- pass('leaving duel cleans match objects and restores ordinary CS training');
+ s.lobbyMode='CS';await g.call('lobby','launchTraining');assert.equal(s.mode,'DUEL');assert(s.duel);assert(s.player.visible);pass('retired modes cannot be reactivated');
  fs.writeFileSync(path.join(__dirname,'../DUEL-TEST-RESULTS.json'),JSON.stringify({checks},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});

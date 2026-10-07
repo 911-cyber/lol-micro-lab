@@ -2,17 +2,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { disposeObject } from './champions.js';
 
-const ARENAS = {
-  DUEL:{name:'MID DUEL',width:44,depth:16,accent:0x76ab78},
-  FREE: {name:'SANDBOX',width:36,depth:24,accent:0x4baeb5},
-  KITE: {name:'KITING COURT',width:72,depth:52,accent:0x43bba7},
-  TARGET: {name:'TARGET GALLERY',width:30,depth:24,accent:0xa479d4},
-  SPACING: {name:'SPACING RING',width:30,depth:24,accent:0xc7a45a},
-  DODGE: {name:'DODGE CHAMBER',width:40,depth:28,accent:0x529cdd},
-  CS: {name:'LAST-HIT LANE',width:32,depth:16,accent:0x68a876},
-  COMBINED: {name:'COMBAT COURT',width:64,depth:44,accent:0x5f97c7},
-  LANE: {name:'LANE PHASE',width:36,depth:20,accent:0x76ab78}
-};
+const ARENAS={DUEL:{name:'MID DUEL',width:48,depth:22,accent:0x76ab78}};
 
 export function buildArena(mode) {
   if(!state.arenaGroup) {
@@ -20,12 +10,12 @@ export function buildArena(mode) {
       if([state.ground,state.lane,state.river,state.grid].includes(object)||object.geometry?.type==='DodecahedronGeometry') {state.scene.remove(object);disposeObject(object);}
     }
   } else {state.scene.remove(state.arenaGroup);disposeObject(state.arenaGroup);}
-  const config=ARENAS[mode]||ARENAS.FREE;
+  const config=ARENAS[mode]||ARENAS.DUEL;
   state.arenaBounds={minX:-config.width/2+.8,maxX:config.width/2-.8,minZ:-config.depth/2+.8,maxZ:config.depth/2-.8};
   state.arenaName=config.name;
   const arena=new THREE.Group();state.arenaGroup=arena;state.scene.add(arena);
   const stone=new THREE.MeshStandardMaterial({color:0x303e43,roughness:.9});
-  const floor=new THREE.MeshStandardMaterial({color:mode==='CS'||mode==='LANE'||mode==='DUEL'?0x314837:0x24373d,roughness:1});
+  const floor=new THREE.MeshStandardMaterial({color:true?0x314837:0x24373d,roughness:1});
   const trim=new THREE.MeshBasicMaterial({color:config.accent,transparent:true,opacity:.65});
   function box(size,material,position){const mesh=new THREE.Mesh(new THREE.BoxGeometry(...size),material);mesh.position.set(...position);mesh.receiveShadow=true;mesh.castShadow=true;arena.add(mesh);return mesh;}
   box([config.width,.35,config.depth],floor,[0,-.2,0]);

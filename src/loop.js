@@ -1,37 +1,29 @@
+import { shiftDeadlines } from './game-clock.js';
 import * as THREE from 'three';
 import { state } from './state.js';
 import { updateCameraMotion, updateCameraTransform } from './camera.js';
 import { updateOrder, updateProjectiles } from './combat.js';
-import { respawnEnemies } from './entities.js';
-import { updateCsMode, updateEnemyHpBars } from './minions.js';
-import { updateLane } from './lane.js';
-import { updateKiteMode, updateTargetMode, updateSpacingMode, updateDodgeMode, updateModeTimer } from './drills.js';
+import { updateEnemyHpBars } from './minions.js';
 import { updateVisuals, updateHud } from './ui.js';
 import { animateChampion } from './champions.js';
 import { updateCoach } from './coach.js';
 import { updateAbilities } from './abilities.js';
-import { updateOpponents } from './enemy-casters.js';
 import { updatePresentation } from './presentation.js';
 import { updateMicro } from './micro.js';
+import { updateAim } from './aim.js';
 import { updateDuel } from './duel.js';
 export function animate(ms) {
   const now = ms / 1000,
     dt = Math.min(.05, (ms - state.lastTime) / 1000 || 0);
   state.lastTime = ms;
-  if(state.menuOpen||state.resultPanel.classList.contains('show')||(state.mode==='DUEL'&&state.duel?.phase!=='play')) {state.renderer.render(state.scene,state.camera);requestAnimationFrame(animate);return;}
+  if(state.settingsOpen||state.menuOpen||state.resultPanel.classList.contains('show')||(state.mode==='DUEL'&&state.duel?.phase!=='play')) {state.pausedAt??=ms;state.renderer.render(state.scene,state.camera);requestAnimationFrame(animate);return;}
+  if(state.pausedAt!==undefined){shiftDeadlines((ms-state.pausedAt)/1000);state.pausedAt=undefined;}
   updateAbilities(dt,now);
   updateOrder(dt, now);
   updateProjectiles(dt, now);
-  respawnEnemies(now);
-  updateKiteMode(dt, now);
-  updateTargetMode(dt);
-  updateSpacingMode(dt, now);
-  updateDodgeMode(dt);
-  updateOpponents(dt,now);
-  updateCsMode(dt, now);
-  updateLane(dt, now);updateDuel(dt,now);
+  updateDuel(dt,now);
   updateMicro(dt,now);
-  updateModeTimer(dt);
+  updateAim();
   updateVisuals(dt);
   updateCameraMotion(dt);
   updateCameraTransform();

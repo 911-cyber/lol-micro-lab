@@ -7,7 +7,8 @@ export function clampFocus() {
 export function getCameraOffset() {
   const p = THREE.MathUtils.degToRad(state.CAMERA_PITCH_DEG),
     d = state.CAMERA_DISTANCE * state.cameraSettings.zoom;
-  return new THREE.Vector3(0, Math.sin(p) * d, Math.cos(p) * d);
+  const yaw=THREE.MathUtils.degToRad(-45);
+  return new THREE.Vector3(Math.sin(yaw)*Math.cos(p)*d,Math.sin(p)*d,Math.cos(yaw)*Math.cos(p)*d);
 }
 export function updateCameraTransform() {
   state.camera.position.copy(state.cameraFocus).add(getCameraOffset());
@@ -41,11 +42,12 @@ export function updateCameraMotion(dt) {
     clampFocus();
     return;
   }
-  if (!state.cameraSettings.edgeScroll || state.middleDragging || !state.pointerInside) return;
-  let x = 0,
-    y = 0;
+  if(state.middleDragging)return;
+  let x=(state.cameraKeys?.ArrowRight?1:0)-(state.cameraKeys?.ArrowLeft?1:0),y=(state.cameraKeys?.ArrowUp?1:0)-(state.cameraKeys?.ArrowDown?1:0);
+  if (state.cameraSettings.edgeScroll&&state.pointerInside) {
   if (state.pointerPx.x <= state.EDGE_SCROLL_PX) x = -1;else if (state.pointerPx.x >= innerWidth - state.EDGE_SCROLL_PX) x = 1;
   if (state.pointerPx.y <= state.EDGE_SCROLL_PX) y = 1;else if (state.pointerPx.y >= innerHeight - state.EDGE_SCROLL_PX) y = -1;
+  }
   if (!x && !y) return;
   const {
     forward,
