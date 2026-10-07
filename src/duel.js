@@ -1,3 +1,5 @@
+import { separateMinions, minionRoute } from './minion-spacing.js';
+import { animateMinions } from './minion-model.js';
 import * as THREE from 'three';
 import { state } from './state.js';
 import { createEnemy, createAlliedMinion, setEnemyAppearance } from './entities.js';
@@ -63,17 +65,17 @@ function finishRound(winner){
  document.querySelector('#duelItems').hidden=d.phase!=='items';document.querySelector('#duelRetry').hidden=d.phase!=='complete';
 }
 function wave(){
- const d=state.duel;d.nextWave=d.time+14;
+ const d=state.duel;d.nextWave=d.time+30;
  for(const team of ['ally','enemy']){
   const units=team==='ally'?state.alliedMinions:state.enemies.filter(e=>e.type==='minion');
-  if(units.filter(e=>e.alive).length>=12)continue;
-  for(let i=0;i<6;i++){const melee=i<3,unit=team==='ally'?createAlliedMinion('味方ミニオン',-13-(i%3)*.8-(melee?0:1.8),(i%3-1)*.8,melee?320:220,.45,melee?'melee':'caster'):createEnemy('敵ミニオン',13+(i%3)*.8+(melee?0:1.8),(i%3-1)*.8,0xb75a62,melee?320:220,.45,'minion');unit.minionClass=melee?'melee':'caster';makeMinionHpBar(unit);}
+  if(units.filter(e=>e.alive).length+6>12)continue;
+  for(let i=0;i<6;i++){const melee=i<3,slot=i%3-1,side=team==='ally'?-1:1,x=side*(31+(melee?0:4.8)+(i%3)*.3),z=slot*1.7,unit=team==='ally'?createAlliedMinion('味方'+(melee?'前衛':'後衛'),x,z,melee?320:220,.45,melee?'melee':'caster'):createEnemy('敵'+(melee?'前衛':'後衛'),x,z,0xb75a62,melee?320:220,.45,'minion');unit.minionClass=melee?'melee':'caster';unit.laneSlot=slot;makeMinionHpBar(unit);}
  }
  // Dispose old waves rather than accumulating scene objects in a long match.
  for(const list of [state.enemies,state.alliedMinions])for(let i=list.length-1;i>=0;i--){const e=list[i];if(e.type==='minion'&&!e.alive){remove(e.group);if(e.hpBar)remove(e.hpBar.root);list.splice(i,1);}}
 }
 function distance(a,b){return a.group.position.distanceTo(b.group.position);}
-function move(unit,point,speed,dt){const dir=point.clone().sub(unit.group.position).setY(0),len=dir.length();if(len>.05){unit.group.position.addScaledVector(dir.normalize(),Math.min(len,speed*dt));unit.group.position.x=THREE.MathUtils.clamp(unit.group.position.x,-18,18);unit.group.position.z=THREE.MathUtils.clamp(unit.group.position.z,-6,6);unit.group.lookAt(point.x,0,point.z);}}
+function move(unit,point,speed,dt){const dir=point.clone().sub(unit.group.position).setY(0),len=dir.length();if(len>.05){unit.group.position.addScaledVector(dir.normalize(),Math.min(len,speed*dt));unit.group.position.x=THREE.MathUtils.clamp(unit.group.position.x,unit.type==='minion'?state.arenaBounds.minX:-18,unit.type==='minion'?state.arenaBounds.maxX:18);unit.group.position.z=THREE.MathUtils.clamp(unit.group.position.z,unit.type==='minion'?state.arenaBounds.minZ:-6,unit.type==='minion'?state.arenaBounds.maxZ:6);unit.group.lookAt(point.x,0,point.z);}}
 function bolt(origin,target,damage,team,kind='AA',direction=null){
  const mesh=createSkillBolt(team==='enemy'?0xffbe6c:0x7bcaff,.18,false,{id:'Ezreal',key:kind});mesh.position.copy(origin).setY(.8);state.scene.add(mesh);
  state.duel.shots.push({mesh,target,damage,team,kind,dir:direction,life:kind==='Q'?11.5/20:kind==='W'?11.5/17:3,hit:false});
@@ -136,9 +138,10 @@ function botAI(dt,now,player){
 }
 function duelMinion(unit,opponents,hero,tower,dt,now){
  if(!unit.alive)return;const st=laneUnitStats(unit),d=state.duel,aggro=unit.team==='enemy'?d.aggressionUntil>d.time:d.botAggroUntil>d.time;
- const target=aggro&&hero.alive&&distance(unit,hero)<4.5?hero:opponents.slice().sort((a,b)=>distance(unit,a)-distance(unit,b))[0]||tower;
+ const target=aggro&&hero.alive&&distance(unit,hero)<4.5?hero:opponents.slice().sort((a,b)=>(distance(unit,a)+Math.abs((unit.laneSlot||0)-(a.laneSlot||0))*1.3)-(distance(unit,b)+Math.abs((unit.laneSlot||0)-(b.laneSlot||0))*1.3))[0]||tower;
  if(!target?.alive)return;const gap=distance(unit,target);
- if(gap>st.range)move(unit,target.group.position,st.move*1.8*enemyMovement(unit,now),dt);
+ const range=st.range+unit.radius+target.radius;
+ if(gap>range)move(unit,minionRoute(unit,target.group.position),st.move*1.8*enemyMovement(unit,now),dt);
  else if(now>=unit.nextAttack){unit.nextAttack=now+st.interval;const amount=st.damage*((target.player||target.type==='duelist')?.15:1);if(unit.minionClass==='caster')bolt(unit.group.position,target,amount,unit.team,'MINION');else take(target,amount,unit.team,now);}
 }
 export function updateDuel(dt,now){
@@ -152,6 +155,7 @@ export function updateDuel(dt,now){
  const allies=state.alliedMinions.filter(e=>e.alive),enemies=state.enemies.filter(e=>e.type==='minion'&&e.alive);
  for(const a of allies)duelMinion(a,enemies,d.bot,d.red,dt,now);
  for(const e of enemies)duelMinion(e,allies,player,d.blue,dt,now);
+ separateMinions([...allies,...enemies]);animateMinions([...allies,...enemies],now);
  botAI(dt,now,player);shots(dt,now,player);
  for(const t of [d.blue,d.red]){
   const hostile=t.team==='ally'?enemies:allies,hero=t.team==='ally'?d.bot:player;
@@ -169,3 +173,4 @@ export function bindDuel(retry,menu){
  for(const item of DUEL_ITEMS)document.querySelector('#duel-'+item.id).addEventListener('click',()=>chooseDuelItem(item.id));
  document.querySelector('#duelRetry').addEventListener('click',retry);document.querySelector('#duelMenu').addEventListener('click',menu);
 }
+

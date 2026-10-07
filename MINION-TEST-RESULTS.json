@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "waves spawn beyond both towers on an extended lane, thirty seconds apart",
+    "shield/weapon melee and hood/staff casters have separated three-unit ranks",
+    "minions walk from the base at normal speed instead of snapping to the tower",
+    "the incoming formation walks around its own tower and reaches the central lane",
+    "even an initially stacked wave is separated into distinct bodies",
+    "separated front/rear units fight and each enemy body can be selected accurately",
+    "a cleared wave can advance and damage the enemy tower before reinforcements arrive",
+    "the next wave arrives from the distant base, not at the contested tower",
+    "the reference camera uses a steeper diagonal lane and a lower overhead pitch"
+  ]
+}

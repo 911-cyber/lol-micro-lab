@@ -7,7 +7,7 @@ export function clampFocus() {
 export function getCameraOffset() {
   const p = THREE.MathUtils.degToRad(state.CAMERA_PITCH_DEG),
     d = state.CAMERA_DISTANCE * state.cameraSettings.zoom;
-  const yaw=THREE.MathUtils.degToRad(-45);
+  const yaw=THREE.MathUtils.degToRad(-57);
   return new THREE.Vector3(Math.sin(yaw)*Math.cos(p)*d,Math.sin(p)*d,Math.cos(yaw)*Math.cos(p)*d);
 }
 export function updateCameraTransform() {
@@ -58,3 +58,4 @@ export function updateCameraMotion(dt) {
   state.cameraFocus.addScaledVector(v, state.CAMERA_PAN_SPEED * state.cameraSettings.zoom * dt);
   clampFocus();
 }
+

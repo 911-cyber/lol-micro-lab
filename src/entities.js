@@ -1,3 +1,4 @@
+import { buildMinion } from './minion-model.js';
 import * as THREE from 'three';
 import { state } from './state.js';
 import { rayFromScreen } from './camera.js';
@@ -11,16 +12,16 @@ export function setEnemyAppearance(enemy,id=null) {
   enemy.group.position.copy(position);enemy.group.scale.setScalar(1.05);enemy.group.add(enemy.hitbox);state.scene.add(enemy.group);
 }
 export function createEnemy(name, x, z, color = 0xd95762, maxHp = 700, radius = .76, type = 'dummy') {
-  const group = makeChampion(color, 0x69232b);
+  const group = type==='minion'?buildMinion('enemy',maxHp===220?'caster':'melee'):makeChampion(color,0x69232b);
   group.position.set(x, 0, z);
-  group.scale.setScalar(type === 'minion' ? .62 : 1.05);
+  group.scale.setScalar(type === 'minion' ? 1 : 1.05);
   state.scene.add(group);
-  const hitbox = new THREE.Mesh(new THREE.SphereGeometry(type === 'minion' ? .85 : 1.25, 14, 10), new THREE.MeshBasicMaterial({
+  const hitbox = new THREE.Mesh(type==='minion'?new THREE.CapsuleGeometry(.36,.5,6,12):new THREE.SphereGeometry(1.25,14,10), new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0,
     depthWrite: false
   }));
-  hitbox.position.y = .85;
+  hitbox.position.y = type==='minion'?.65:.85;
   group.add(hitbox);
   const e = {
     name,
@@ -45,9 +46,9 @@ export function createEnemy(name, x, z, color = 0xd95762, maxHp = 700, radius = 
 }
 export function createAlliedMinion(name, x, z, maxHp = 320, radius = .48, minionClass = 'melee') {
   const color = minionClass === 'melee' ? 0x4d82c8 : 0x637ccf;
-  const group = makeChampion(color, 0x24456f);
+  const group = buildMinion('ally',minionClass);
   group.position.set(x, 0, z);
-  group.scale.setScalar(minionClass === 'melee' ? .62 : .55);
+  group.scale.setScalar(1);
   state.scene.add(group);
   const unit = {
     name,
@@ -74,7 +75,7 @@ export function pickEnemy(x, y) {
     bestDist = Infinity;
   for (const e of livingEnemies()) {
     if(state.targetChampionsOnly&&e.type!=='duelist')continue;
-    const hits = state.raycaster.intersectObject(e.group, true);
+    const hits = state.raycaster.intersectObject(e.type==='minion'?e.hitbox:e.group, true);
     if (hits.length && hits[0].distance < bestDist) {
       best = e;
       bestDist = hits[0].distance;

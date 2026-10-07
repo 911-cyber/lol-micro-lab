@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { disposeObject } from './champions.js';
 
-const ARENAS={DUEL:{name:'MID DUEL',width:48,depth:22,accent:0x76ab78}};
+const ARENAS={DUEL:{name:'MID DUEL',width:80,depth:22,accent:0x76ab78}};
 
 export function buildArena(mode) {
   if(!state.arenaGroup) {
@@ -15,7 +15,7 @@ export function buildArena(mode) {
   state.arenaName=config.name;
   const arena=new THREE.Group();state.arenaGroup=arena;state.scene.add(arena);
   const stone=new THREE.MeshStandardMaterial({color:0x303e43,roughness:.9});
-  const floor=new THREE.MeshStandardMaterial({color:true?0x314837:0x24373d,roughness:1});
+  const floor=new THREE.MeshStandardMaterial({color:0x314837,roughness:1});
   const trim=new THREE.MeshBasicMaterial({color:config.accent,transparent:true,opacity:.65});
   function box(size,material,position){const mesh=new THREE.Mesh(new THREE.BoxGeometry(...size),material);mesh.position.set(...position);mesh.receiveShadow=true;mesh.castShadow=true;arena.add(mesh);return mesh;}
   box([config.width,.35,config.depth],floor,[0,-.2,0]);
@@ -29,9 +29,9 @@ export function buildArena(mode) {
       const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.3),trim);crystal.position.set(x,1.5,side*config.depth/2);arena.add(crystal);
     }
   }
-  if(mode==='CS'||mode==='LANE'||mode==='DUEL') {
-    box([config.width-2,.05,5.5],new THREE.MeshStandardMaterial({color:0x555747,roughness:1}),[0,.02,0]);
-    for(let x=-14;x<=14;x+=2)box([.035,.02,5.4],stone,[x,.06,0]);
+  if(mode==='DUEL') {
+    box([config.width-2,.05,8],new THREE.MeshStandardMaterial({color:0x555747,roughness:1}),[0,.02,0]);
+    for(let x=-36;x<=36;x+=2)box([.035,.02,7.9],stone,[x,.06,0]);
     for(const z of [-6,6])for(let x=-12;x<=12;x+=4) {
       const shrub=new THREE.Mesh(new THREE.IcosahedronGeometry(.7),new THREE.MeshStandardMaterial({color:0x315d46,roughness:1}));shrub.position.set(x,.45,z);shrub.scale.y=.6;arena.add(shrub);
     }
