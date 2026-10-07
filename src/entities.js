@@ -86,6 +86,7 @@ export function resetEntities() {
   for (const e of state.enemies) {
     if (e !== state.mainDummy) {
       state.scene.remove(e.group);
+      if(e.type==='caster')disposeObject(e.group);
       if (e.lastHitIndicator) state.scene.remove(e.lastHitIndicator);
       if (e.hpBar) state.scene.remove(e.hpBar.root);
     }
@@ -120,6 +121,7 @@ export function resetEntities() {
 export function respawnEnemies(now) {
   if (state.mode === state.MODE.CS || state.mode === state.MODE.LANE || state.mode === state.MODE.DODGE) return;
   for (const e of state.enemies) {
+    if(e.type==='caster')continue;
     if (e.alive || now < e.respawnAt) continue;
     e.alive = true;
     e.group.visible = true;

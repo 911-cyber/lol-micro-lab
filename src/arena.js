@@ -4,12 +4,12 @@ import { disposeObject } from './champions.js';
 
 const ARENAS = {
   FREE: {name:'SANDBOX',width:36,depth:24,accent:0x4baeb5},
-  KITE: {name:'KITING COURT',width:36,depth:24,accent:0x43bba7},
+  KITE: {name:'KITING COURT',width:72,depth:52,accent:0x43bba7},
   TARGET: {name:'TARGET GALLERY',width:30,depth:24,accent:0xa479d4},
   SPACING: {name:'SPACING RING',width:30,depth:24,accent:0xc7a45a},
   DODGE: {name:'DODGE CHAMBER',width:40,depth:28,accent:0x529cdd},
   CS: {name:'LAST-HIT LANE',width:32,depth:16,accent:0x68a876},
-  COMBINED: {name:'COMBAT COURT',width:40,depth:28,accent:0x5f97c7},
+  COMBINED: {name:'COMBAT COURT',width:64,depth:44,accent:0x5f97c7},
   LANE: {name:'LANE PHASE',width:36,depth:20,accent:0x76ab78}
 };
 

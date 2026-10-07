@@ -6,6 +6,7 @@ import { toast } from './ui.js';
 import { setEnemyAppearance } from './entities.js';
 import { championProjectile, disposeObject } from './champions.js';
 import { championById } from './roster.js';
+import { enemyMovement, hurtPlayer } from './abilities.js';
 
 const SETTINGS = [
   { windup: .75, interval: 3, speed: 7.2, damage: 8, movement: 1.3 },
@@ -83,7 +84,7 @@ function updateShots(dt) {
     const segment = new THREE.Line3(previous, shot.mesh.position);
     const closest = segment.closestPointToPoint(player, true, new THREE.Vector3());
     if (closest.distanceTo(player) < HIT_RADIUS) {
-      state.playerHp = Math.max(0, state.playerHp - shot.config.damage);
+      hurtPlayer(shot.config.damage,performance.now()/1000);
       state.laneMetrics.hit++;
       state.laneMetrics.damage += shot.config.damage;
       state.score = Math.max(0, state.score - 50);
@@ -123,11 +124,11 @@ export function updateLane(dt, now) {
     const distance = edgeDistance(enemy);
     const direction = state.player.position.clone().sub(enemy.group.position).setY(0);
     if (direction.lengthSq()) direction.normalize();
-    if (distance > 6.2) enemy.group.position.addScaledVector(direction, config.movement * dt);
-    if (distance < 4.2) enemy.group.position.addScaledVector(direction, -config.movement * dt);
+    if (distance > 6.2) enemy.group.position.addScaledVector(direction, config.movement * dt * enemyMovement(enemy,now));
+    if (distance < 4.2) enemy.group.position.addScaledVector(direction, -config.movement * dt * enemyMovement(enemy,now));
     enemy.group.position.x = THREE.MathUtils.clamp(enemy.group.position.x, -2, 12);
     enemy.group.position.z = THREE.MathUtils.clamp(enemy.group.position.z, -6, 6);
-    if (distance <= 7 && now >= data.nextAttack) prepareShot(now);
+    if (distance <= 7 && now >= data.nextAttack && enemyMovement(enemy,now)>0) prepareShot(now);
   }
   updateShots(dt);
   updateMinionHpBar(enemy);

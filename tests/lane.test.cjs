@@ -67,7 +67,7 @@ if(require.main===module)(async()=>{
     const before=await game(THREE,path.resolve(process.argv[3])),after=await game(THREE);
     for(const g of [before,after])g.pointer([0,0,4]);for(const g of [before,after])g.tick(15);assert.deepEqual(snapshot(after),snapshot(before));
     for(const g of [before,after]){g.key('KeyS');g.tick(5);g.pointer([8,.8,-2]);g.tick(65);}assert.deepEqual(snapshot(after),snapshot(before));assert(after.s.hits>0);
-    for(const g of [before,after]){g.key('KeyA');g.pointer([8,.8,-2],0);g.tick(35);g.pointer([8,.8,-2],2,true);g.tick(35);g.key('Space');g.tick(2);g.release('Space');g.key('KeyY');g.tick(2);g.key('KeyY');g.key('KeyD');}assert.deepEqual(snapshot(after),snapshot(before));
+    for(const g of [before,after]){g.key('KeyA');g.pointer([8,.8,-2],0);g.tick(35);g.pointer([8,.8,-2],2,true);g.tick(35);g.key('Space');g.tick(2);g.release('Space');g.key('KeyY');g.tick(2);g.key('KeyY');g.key('KeyH');}assert.deepEqual(snapshot(after),snapshot(before));
     pass('RMB movement/AA, stop, both attack moves, Space/Y and difficulty match baseline');
     for(let mode=1;mode<=6;mode++) { for(const g of [before,after])g.key('Digit'+mode); for(let n=0;n<12;n++){for(const g of [before,after])g.tick(80);assert.deepEqual(snapshot(after),snapshot(before),`mode ${mode}, checkpoint ${n}`);} }
     pass('72 existing-mode state/result/HP-bar comparisons against baseline');
@@ -80,7 +80,7 @@ if(require.main===module)(async()=>{
   start();let w=warning();const direction=w.direction.clone();s.player.position.z=3;g.tick(45);assert(s.laneMetrics.dodged>0);assert.equal(s.laneMetrics.hit,0);assert.equal(s.playerHp,100);assert(direction.z===0);pass('locked telegraph can be dodged by moving sideways');
   start();warning();g.tick(50);assert(s.laneMetrics.hit>0);assert(s.playerHp<100);pass('standing in aimed shot causes damage and hit count');
   for(let difficulty=0;difficulty<3;difficulty++){start();s.difficultyIndex=difficulty;w=warning();assert.equal(w.config.windup,[.75,.55,.4][difficulty]);assert.equal(w.config.damage,[8,10,12][difficulty]);}pass('difficulty changes only lane attack tuning');
-  start();warning();const warningMesh=s.laneData.warning.mesh;g.key('KeyR');assert(!s.scene.children.includes(warningMesh));assert.equal(s.laneData.warning,null);assert.equal(s.laneMetrics.hit,0);pass('restart clears warning and counters');
+  start();warning();const warningMesh=s.laneData.warning.mesh;g.key('KeyT');assert(!s.scene.children.includes(warningMesh));assert.equal(s.laneData.warning,null);assert.equal(s.laneMetrics.hit,0);pass('restart clears warning and counters');
   warning();g.tick(12);const shots=s.laneData.shots.map(p=>p.mesh),bar=s.mainDummy.hpBar.root;g.key('Digit5');assert.equal(s.laneData,null);assert(!s.scene.children.includes(bar));assert(shots.every(p=>!s.scene.children.includes(p)));assert.equal(s.enemies.filter(e=>e.type==='champion').length,0);pass('switching back to CS removes opponent HP bar and harass');
   start();const champ=s.mainDummy;await g.call('combat','damageEnemy',champ,700,g.now(),true);const wave=s.modeData.wave;for(const e of s.enemies.slice(1))e.alive=false;g.tick();assert.equal(s.modeData.wave,wave+1);assert.equal(champ.alive,false);assert.equal(s.enemies[0],champ);pass('wave respawn preserves opponent and does not revive minions');
   g.tick(65);assert(champ.alive);assert.equal(champ.hp,700);assert(champ.hpBar.root.visible);pass('opponent respawns with HP bar after a three-second respite');

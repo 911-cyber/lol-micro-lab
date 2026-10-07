@@ -8,6 +8,8 @@ import { toast, hideResult, showResult } from './ui.js';
 import { buildArena } from './arena.js';
 import { startCoach } from './coach.js';
 import { disposeObject } from './champions.js';
+import { resetAbilities, enemyMovement, hurtPlayer } from './abilities.js';
+import { resetOpponents, startOpponents } from './enemy-casters.js';
 export function resetStats() {
   state.hits = 0;
   state.cancels = 0;
@@ -41,6 +43,7 @@ export function setMode(next, opts = {}) {
   state.mode = next;
   if(next!==state.MODE.FREE&&state.lobbyMode)state.lobbyMode=next;
   resetLane();
+  resetOpponents();
   if(keepResult&&next===state.MODE.FREE){
     state.order={type:'idle',point:state.player.position.clone(),target:null};state.attackState='idle';state.attackTarget=null;
     state.modeBanner.textContent=`${opts.complete} COMPLETE`;state.objectiveBanner.textContent='結果の助言を確認して、同じ練習かモード選択へ。';
@@ -48,6 +51,7 @@ export function setMode(next, opts = {}) {
   }
   resetEntities();
   if (!keepStats) resetStats();
+  if(state.selectedChampion)resetAbilities();
   if (!keepResult) hideResult();
   state.order = {
     type: 'idle',
@@ -64,7 +68,7 @@ export function setMode(next, opts = {}) {
   if(state.selectedChampion&&!opts.keepResult){buildArena(next);startCoach();}
   if (state.mode === state.MODE.FREE) {
     state.modeBanner.textContent = opts.complete ? `${opts.complete} COMPLETE` : 'FREE MODE';
-    state.objectiveBanner.textContent = opts.complete ? 'リザルトを確認。1〜7で次の練習を開始' : '1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO • 7 LANE';
+    state.objectiveBanner.textContent = opts.complete ? 'リザルトを確認して次の練習へ' : 'Q/W/E/R スキル · D ヒール · F フラッシュ · 敵をRMBでAA';
     return;
   }
   if (state.mode === state.MODE.KITE) {
@@ -97,7 +101,7 @@ export function setMode(next, opts = {}) {
   }
   if (state.mode === state.MODE.DODGE) {
     state.modeBanner.textContent = 'DODGE — 30s';
-    state.objectiveBanner.textContent = '青いスキルショットを避ける。被弾でHPとスコア減';
+    state.objectiveBanner.textContent = '対面チャンピオンの予告を見て横へ回避。Fでフラッシュ、Dでヒール';
     state.mainDummy.group.visible = false;
     state.mainDummy.alive = false;
     state.modeData.time = 30;
@@ -115,7 +119,7 @@ export function setMode(next, opts = {}) {
   }
   if (state.mode === state.MODE.COMBINED) {
     state.modeBanner.textContent = 'KITE + DODGE — 40s';
-    state.objectiveBanner.textContent = 'AA→移動を維持しながら青いスキルショットも避ける';
+    state.objectiveBanner.textContent = 'AA発射後に移動しながら、対面チャンピオンのスキルも回避';
     state.mainDummy.group.position.set(8, 0, -1);
     state.modeData.time = 40;
     state.sessionDuration = 40;
@@ -130,6 +134,7 @@ export function setMode(next, opts = {}) {
     spawnWave();
     startLane();
   }
+  startOpponents(next);
   toast(`${state.mode} START — ${state.difficulty().name}`, 'info');
 }
 export function updateKiteMode(dt, now) {
@@ -139,11 +144,11 @@ export function updateKiteMode(dt, now) {
   const dist = delta.length();
   if (dist > 1.55) {
     delta.normalize();
-    state.mainDummy.group.position.addScaledVector(delta, state.difficulty().kiteSpeed * dt);
+    state.mainDummy.group.position.addScaledVector(delta, state.difficulty().kiteSpeed * dt * enemyMovement(state.mainDummy,now));
   }
-  if (dist < 1.95 && now >= state.modeData.nextEnemyAttack) {
+  if (dist < 1.95 && now >= state.modeData.nextEnemyAttack && enemyMovement(state.mainDummy,now)>0) {
     state.modeData.nextEnemyAttack = now + 1.0;
-    state.playerHp = Math.max(0, state.playerHp - state.difficulty().kiteDamage);
+    hurtPlayer(state.difficulty().kiteDamage,now);
     state.score = Math.max(0, state.score - 40);
     toast('Too close — hit by dummy', 'bad');
   }
@@ -151,7 +156,7 @@ export function updateKiteMode(dt, now) {
 export function updateTargetMode(dt) {
   if (state.mode !== state.MODE.TARGET) return;
   for (const e of livingEnemies()) {
-    e.aiClock += dt;
+    e.aiClock += dt * enemyMovement(e);
     const center = e === state.mainDummy ? new THREE.Vector3(6, 0, -3) : e.name.startsWith('ORANGE') ? new THREE.Vector3(10, 0, 2) : new THREE.Vector3(5, 0, 5);
     e.group.position.x = center.x + Math.sin(e.aiClock * .9 * state.difficulty().targetMotion) * 1.2;
     e.group.position.z = center.z + Math.cos(e.aiClock * .7 * state.difficulty().targetMotion) * 1.0;
@@ -164,13 +169,13 @@ export function updateSpacingMode(dt, now) {
   const dir = new THREE.Vector3().subVectors(state.player.position, state.mainDummy.group.position);
   dir.y = 0;
   if (dir.lengthSq()) dir.normalize();
-  if (dist > 3.85) state.mainDummy.group.position.addScaledVector(dir, state.difficulty().spacingSpeed * dt);
+  if (dist > 3.85) state.mainDummy.group.position.addScaledVector(dir, state.difficulty().spacingSpeed * dt * enemyMovement(state.mainDummy,now));
   if (dist < 3.9) {
     state.modeData.spacingDangerTime += dt;
     state.score = Math.max(0, state.score - 8 * dt);
     if (now >= state.modeData.nextEnemyAttack) {
       state.modeData.nextEnemyAttack = now + .8;
-      state.playerHp = Math.max(0, state.playerHp - state.difficulty().spacingDamage);
+      hurtPlayer(state.difficulty().spacingDamage,now);
     }
   }
   if (dist >= 4.1 && dist <= state.ATTACK_RANGE) {
@@ -205,6 +210,7 @@ export function spawnSkillshot() {
   state.skillshotsFired++;
 }
 export function updateDodgeMode(dt) {
+  if(state.opponents)return;
   if (state.mode !== state.MODE.DODGE && state.mode !== state.MODE.COMBINED) return;
   state.modeData.nextSpawn -= dt;
   if (state.modeData.nextSpawn <= 0) {

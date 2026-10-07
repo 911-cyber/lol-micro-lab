@@ -69,7 +69,7 @@ export function initializeGame() {
   state.mode = state.MODE.FREE;
   state.DIFFICULTIES = [{
     name: 'EASY',
-    kiteSpeed: 2.10,
+    kiteSpeed: 1.30,
     kiteDamage: 6,
     targetMotion: .78,
     spacingSpeed: 1.55,
@@ -79,7 +79,7 @@ export function initializeGame() {
     csDrain: .82
   }, {
     name: 'NORMAL',
-    kiteSpeed: 2.45,
+    kiteSpeed: 1.65,
     kiteDamage: 8,
     targetMotion: 1.00,
     spacingSpeed: 1.85,
@@ -89,7 +89,7 @@ export function initializeGame() {
     csDrain: 1.00
   }, {
     name: 'HARD',
-    kiteSpeed: 2.85,
+    kiteSpeed: 2.05,
     kiteDamage: 10,
     targetMotion: 1.28,
     spacingSpeed: 2.18,

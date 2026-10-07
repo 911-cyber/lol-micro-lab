@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { resultObservation } from './coach.js';
+import { updateMinimap } from './minimap.js';
 export function showMarker(point, color = 0x55e36f) {
   state.markerMaterial.color.setHex(color);
   state.orderMarker.position.set(point.x, .065, point.z);
@@ -132,6 +133,7 @@ export function showResult(finished) {
   state.resultTitleEl.textContent = finished;
   state.resultScoreEl.textContent = `PERFORMANCE ${performance}/100 • SCORE ${Math.round(state.score)} • ${state.difficulty().name}`;
   state.resultStatsEl.innerHTML = stats.map(([a, b]) => statCard(a, b)).join('');
+  if(state.abilities)state.resultStatsEl.innerHTML+=statCard('SKILL HIT',state.abilities.hits)+statCard('FLASH',state.abilities.flash)+statCard('HEAL',state.abilities.heal);
   state.resultDiagnosisEl.textContent = diagnosis + weakestHistoryText();
   state.resultPanel.classList.add('show');
   if(state.coachEnabled)document.querySelector('#coachMessage').textContent=diagnosis;
@@ -153,6 +155,8 @@ export function updateVisuals(dt) {
   }
 }
 export function updateHud(now) {
+  updateMinimap();
+  if(state.selectedChampion){document.querySelector('#playAttackSpeed').textContent=state.ATTACK_SPEED.toFixed(2);document.querySelector('#playRange').textContent=Math.round(state.ATTACK_RANGE*100);document.querySelector('#hudAD').textContent=Math.round(state.ATTACK_DAMAGE);document.querySelector('#hudAS').textContent=state.ATTACK_SPEED.toFixed(2);document.querySelector('#hudMS').textContent=Math.round(state.MOVE_SPEED*100);document.querySelector('#cameraFollow').textContent=state.cameraLocked?'Y 追従ON':'Y 追従OFF';document.querySelector('#trainingPreset').textContent=['KITE','COMBINED'].includes(state.mode)?'練習CD · AAテンポ +65%':'練習CD · 基礎AA';}
   state.modeStateEl.textContent = state.mode;
   state.difficultyStateEl.textContent = state.difficulty().name;
   const attackCycle=document.querySelector('#attackCycle');

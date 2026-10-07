@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { screenToGround } from './camera.js';
 import { cancelWindup, notePostShotMove } from './combat.js';
 import { showMarker } from './ui.js';
+import { cancelChannel } from './abilities.js';
 export function clampPoint(p) {
   p.x = THREE.MathUtils.clamp(p.x, state.arenaBounds?.minX ?? -42, state.arenaBounds?.maxX ?? 42);
   p.z = THREE.MathUtils.clamp(p.z, state.arenaBounds?.minZ ?? -32, state.arenaBounds?.maxZ ?? 32);
@@ -13,6 +14,7 @@ export function facePoint(p) {
   state.player.lookAt(p.x, state.player.position.y, p.z);
 }
 export function issueMovePoint(point, show = true) {
+  cancelChannel('move');
   point = clampPoint(point.clone());
   cancelWindup('move');
   notePostShotMove();
@@ -28,6 +30,7 @@ export function issueMoveFromScreen(x, y, show = true) {
   if (hit) issueMovePoint(hit, show);
 }
 export function issueStop() {
+  cancelChannel('stop');
   cancelWindup('stop');
   state.order = {
     type: 'idle',
