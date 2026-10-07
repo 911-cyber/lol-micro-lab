@@ -3,36 +3,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LoL Micro Lab — Movement v0.1</title>
+  <title>LoL Micro Lab — Combat Core v0.5</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="game"></div>
   <div id="hud">
     <section class="panel intro">
-      <div class="eyebrow">LOL MICRO LAB • MOVEMENT PASS</div>
-      <h1>Movement v0.1</h1>
-      <p>Camera v1.0を固定したまま、LoLの右クリック移動を再現する段階。</p>
+      <div class="eyebrow">LOL MICRO LAB • COMBAT CORE</div>
+      <h1>Combat Core v0.5</h1>
+      <p>移動・AA・Attack Move・Windupキャンセル・Kiting Challenge。</p>
     </section>
 
     <section class="panel state">
-      <div><span>MOVE SPEED</span><b>335</b></div>
-      <div><span>ORDER</span><b id="moveState">IDLE</b></div>
       <div><span>CAMERA</span><b id="cameraState">UNLOCKED</b></div>
+      <div><span>ORDER</span><b id="orderState">IDLE</b></div>
+      <div><span>AS</span><b id="asState">0.75</b></div>
+      <div><span>RANGE</span><b id="rangeState">550</b></div>
     </section>
 
     <section class="panel controls">
-      <div><kbd>Right Click</kbd><span>Move Command</span></div>
-      <div><kbd>Hold RMB</kbd><span>移動先を連続更新</span></div>
-      <div><kbd>S</kbd><span>Stop Command</span></div>
-      <div><kbd>画面端</kbd><span>カメラ移動</span></div>
-      <div><kbd>MMB Drag</kbd><span>マップを掴んで移動</span></div>
-      <div><kbd>Space</kbd><span>押している間、自分を追従</span></div>
-      <div><kbd>Y</kbd><span>Camera Lock / Unlock</span></div>
-      <div><kbd>Wheel</kbd><span>Zoom In / Out</span></div>
+      <div><kbd>RMB Ground</kbd><span>Move</span></div>
+      <div><kbd>RMB Enemy</kbd><span>Attack</span></div>
+      <div><kbd>A → LMB</kbd><span>Attack Move</span></div>
+      <div><kbd>Shift + RMB</kbd><span>Attack Move</span></div>
+      <div><kbd>S</kbd><span>Stop</span></div>
+      <div><kbd>K</kbd><span>30秒 Kiting Challenge</span></div>
+      <div><kbd>Space / Y</kbd><span>Center / Camera Lock</span></div>
     </section>
 
-    <div id="centerHint">RMB — MOVE • S — STOP</div>
+    <section class="panel metrics">
+      <div><span>HITS</span><b id="hitsState">0</b></div>
+      <div><span>CANCELS</span><b id="cancelState">0</b></div>
+      <div><span>CLEAN KITES</span><b id="kiteState">0</b></div>
+      <div><span>DPS</span><b id="dpsState">0</b></div>
+      <div><span>SCORE</span><b id="scoreState">0</b></div>
+    </section>
+
+    <section class="target-card" id="targetCard">
+      <div class="target-name">TRAINING DUMMY</div>
+      <div class="hp-shell"><div class="hp-fill enemy" id="enemyHpFill"></div></div>
+      <div class="hp-text" id="enemyHpText">700 / 700</div>
+    </section>
+
+    <section class="player-card">
+      <div class="hp-shell"><div class="hp-fill player" id="playerHpFill"></div></div>
+      <div class="player-row"><b>YOU</b><span id="playerHpText">100 / 100</span></div>
+    </section>
+
+    <div id="modeBanner">A — ATTACK MOVE</div>
+    <div id="challengeBanner">K — START KITING CHALLENGE</div>
+    <div id="toast"></div>
   </div>
 
   <script type="importmap">
