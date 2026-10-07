@@ -6,7 +6,8 @@ import { issueAttackMove, issueAttack } from './combat.js';
 import { pickEnemy } from './entities.js';
 import { cycleDifficulty, setMode } from './drills.js';
 import { toast } from './ui.js';
-import { openLobby } from './lobby.js';
+import { openLobby, launchTraining } from './lobby.js';
+import { castSkill, releaseCharge } from './abilities.js';
 export function bindInput() {
   state.renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   state.renderer.domElement.addEventListener('pointerdown', e => {
@@ -88,6 +89,7 @@ export function bindInput() {
     if(['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target?.tagName))return;
     if(e.code==='KeyM'){e.preventDefault();openLobby();return;}
     if(state.menuOpen)return;
+    if(!e.repeat&&['KeyQ','KeyW','KeyE','KeyR','KeyD','KeyF'].includes(e.code)){e.preventDefault();castSkill(e.code.slice(3));return;}
     if (e.code === 'Space') {
       e.preventDefault();
       if (!state.spaceHeld) state.cameraFocus.copy(state.player.position);
@@ -107,13 +109,14 @@ export function bindInput() {
       state.rangeRing.visible = true;
       toast('Attack Move armed', 'info');
     }
-    if (e.code === 'KeyD' && !e.repeat) {
+    if (e.code === 'KeyH' && !e.repeat) {
       e.preventDefault();
       cycleDifficulty();
     }
-    if (e.code === 'KeyR' && !e.repeat && state.mode !== state.MODE.FREE) {
+    if (e.code === 'KeyT' && !e.repeat) {
       e.preventDefault();
-      setMode(state.mode);
+      if(state.resultPanel.classList.contains('show'))launchTraining();
+      else setMode(state.mode);
     }
     if (!e.repeat) {
       if (e.code === 'Digit1' || e.code === 'KeyK') setMode(state.MODE.KITE);
@@ -126,6 +129,7 @@ export function bindInput() {
     }
   });
   window.addEventListener('keyup', e => {
+    if(e.code==='KeyQ'&&state.selectedChampion?.id==='Varus')releaseCharge();
     if (e.code === 'Space') state.spaceHeld = false;
   });
 }

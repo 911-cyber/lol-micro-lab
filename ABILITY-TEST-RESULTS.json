@@ -1,0 +1,30 @@
+{
+  "checks": [
+    "all 40 Q/W/E/R slots execute their training behavior; Vayne W correctly stays passive",
+    "Caitlyn R releases after the channel and another champion can intercept it",
+    "Ezreal W mark detonates on Q; hit reduces cooldowns; skills do not inflate AA counts",
+    "Caitlyn net damages/slows forward and moves backward",
+    "Vayne third basic hit procs silver bolts",
+    "Vayne condemn into arena wall adds stun and damage",
+    "Ashe Q requires four landed attacks and then raises attack tempo",
+    "Ashe fan hits each target once, even when several arrows overlap",
+    "Jhin R arms four aimed recasts and ends after the fourth",
+    "Varus held Q increases damage; W empowers the charged arrow",
+    "Kaisa R requires plasma and gives a shield that actually absorbs damage",
+    "Flash distance and cooldown, heal amount and cooldown, live HUD countdown",
+    "mana and paused-menu gates reject casts without consuming resources",
+    "MF movement cancels R, Lucian can move while channeling R",
+    "keyboard QWER/D/F spells and H difficulty use separate bindings",
+    "restart/mode switch clears skill shots, effects, cooldowns and mana; CS still spawns",
+    "29.5-second normal kite sustains real AA/move with full HP, no Flash, no inevitable catch"
+  ],
+  "skillSlotsTested": 40,
+  "kite": {
+    "hits": 28,
+    "cleanKites": 28,
+    "cancels": 0,
+    "hp": 100,
+    "minDistance": 2.964204325262639
+  },
+  "renderer": "stubbed renderer; actual Three.js math/scene graph"
+}

@@ -9,11 +9,14 @@ import { updateKiteMode, updateTargetMode, updateSpacingMode, updateDodgeMode, u
 import { updateVisuals, updateHud } from './ui.js';
 import { animateChampion } from './champions.js';
 import { updateCoach } from './coach.js';
+import { updateAbilities } from './abilities.js';
+import { updateOpponents } from './enemy-casters.js';
 export function animate(ms) {
   const now = ms / 1000,
     dt = Math.min(.05, (ms - state.lastTime) / 1000 || 0);
   state.lastTime = ms;
   if(state.menuOpen||state.resultPanel.classList.contains('show')) {state.renderer.render(state.scene,state.camera);requestAnimationFrame(animate);return;}
+  updateAbilities(dt,now);
   updateOrder(dt, now);
   updateProjectiles(dt, now);
   respawnEnemies(now);
@@ -21,6 +24,7 @@ export function animate(ms) {
   updateTargetMode(dt);
   updateSpacingMode(dt, now);
   updateDodgeMode(dt);
+  updateOpponents(dt,now);
   updateCsMode(dt, now);
   updateLane(dt, now);
   updateModeTimer(dt);

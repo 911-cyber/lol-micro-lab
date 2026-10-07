@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { createEnemy, createAlliedMinion, livingEnemies } from './entities.js';
+import { enemyMovement } from './abilities.js';
 export function makeMinionHpBar(unit) {
   const root = new THREE.Group();
   const bg = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -36,9 +37,9 @@ export function makeMinionHpBar(unit) {
 export function updateMinionHpBar(unit) {
   if (!unit.hpBar) return;
   const ratio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
-  const y = unit.type === 'champion' ? 2.65 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
+  const y = unit.type === 'champion'||unit.type==='caster' ? 2.65 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
   unit.hpBar.root.position.set(unit.group.position.x, y, unit.group.position.z);
-  unit.hpBar.root.visible = (state.mode === state.MODE.CS || state.mode === state.MODE.LANE) && unit.alive && unit.group.visible;
+  unit.hpBar.root.visible = (state.mode === state.MODE.CS || state.mode === state.MODE.LANE || unit.type==='caster') && unit.alive && unit.group.visible;
   unit.hpBar.fill.scale.x = 1.49 * ratio;
   unit.hpBar.fill.position.x = -.745 * (1 - ratio);
 }
@@ -172,7 +173,7 @@ export function updateLaneMinion(unit, opponents, dt, now) {
   const dist = delta.length();
   if (dist > st.range) {
     delta.normalize();
-    unit.group.position.addScaledVector(delta, Math.min(st.move * dt, dist - st.range));
+    unit.group.position.addScaledVector(delta, Math.min(st.move * dt * enemyMovement(unit,now), dist - st.range));
     unit.group.lookAt(unit.group.position.x + delta.x, 0, unit.group.position.z + delta.z);
   } else if (now >= unit.nextAttack) {
     unit.nextAttack = now + st.interval * (1.04 - Math.min(.12, state.difficultyIndex * .04));

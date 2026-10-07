@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "easy/normal/hard spawn one/two/three real champion rigs with HP bars",
+    "nine champion spells telegraph from their actor and can be evaded by sideways movement",
+    "standing in an aimed spell causes damage and a recorded hit",
+    "champion rotation changes skill patterns throughout a session",
+    "killed casters return as a training opponent with a live HP bar",
+    "combined training retains a chasing champion and a separate spell caster",
+    "mode switch removes opponents, warnings and projectiles without disturbing CS"
+  ],
+  "patterns": 9
+}

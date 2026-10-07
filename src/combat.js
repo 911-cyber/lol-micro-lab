@@ -4,6 +4,7 @@ import { clampPoint, facePoint, moveToward, moveTowardTarget } from './player.js
 import { livingEnemies } from './entities.js';
 import { toast, flashTarget, showMarker } from './ui.js';
 import { championProjectile, disposeObject } from './champions.js';
+import { basicAttackDamage, onBasicHit } from './abilities.js';
 export function edgeDistance(e) {
   return Math.max(0, state.player.position.distanceTo(e.group.position) - state.PLAYER_RADIUS - e.radius);
 }
@@ -85,7 +86,7 @@ export function launchProjectile(e, now) {
   state.projectiles.push({
     mesh,
     target: e,
-    damage: state.ATTACK_DAMAGE * (state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0 ? 1.5 : 1)
+    damage: basicAttackDamage(now) * (state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0 ? 1.5 : 1)
   });
   if(state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0) {
     state.reloadUntil = now + 2.5;
@@ -103,11 +104,11 @@ export function killEnemy(e, now, fromPlayer = true) {
     if (e.type === 'minion') state.cs++;
   }
 }
-export function damageEnemy(e, amount, now, fromPlayer = true) {
+export function damageEnemy(e, amount, now, fromPlayer = true, fromSkill = false) {
   if (!e?.alive) return;
   e.hp = Math.max(0, e.hp - amount);
   if (fromPlayer) {
-    state.hits++;
+    if(!fromSkill)state.hits++;
     state.score += 60;
   }
   if (e.hp <= 0) killEnemy(e, now, fromPlayer);
@@ -131,6 +132,7 @@ export function updateProjectiles(dt, now) {
       if(state.selectedChampion)disposeObject(p.mesh);
       state.projectiles.splice(i, 1);
       damageEnemy(e, p.damage ?? state.ATTACK_DAMAGE, now, true);
+      onBasicHit(e,now,p.damage??state.ATTACK_DAMAGE);
     } else {
       p.mesh.lookAt(aim);
       p.mesh.position.addScaledVector(delta.normalize(), step);
@@ -138,6 +140,10 @@ export function updateProjectiles(dt, now) {
   }
 }
 export function updateOrder(dt, now) {
+  if(state.playerRootUntil>now)return;
+  if(state.abilities?.charge||state.abilities?.buffs.kaisaCharge>now){if(state.order.type==='move')moveToward(state.order.point,dt);return;}
+  if(state.abilities?.channel&&state.abilities.channel.kind!=='lucian')return;
+  if(state.abilities?.channel?.kind==='lucian'&&state.order.type!=='move')return;
   if (state.attackState === 'windup') {
     if (!state.attackTarget?.alive) {
       state.attackState = 'idle';

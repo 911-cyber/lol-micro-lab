@@ -4,12 +4,13 @@ import { selectChampion } from './champions.js';
 import { buildArena } from './arena.js';
 import { setMode } from './drills.js';
 import { modeLesson, startCoach, bindCoach } from './coach.js';
+import { abilityKit, initializeAbilityHud, bindAbilityHud } from './abilities.js';
 
 export const DRILLS = [
   {id:'KITE',key:'1',name:'カイティング',tag:'ATTACK + MOVE',icon:'↗',detail:'攻撃したら移動。追いつかれずにダメージを出す。',time:'30秒'},
   {id:'TARGET',key:'2',name:'ターゲット切替',tag:'TARGET SELECTION',icon:'⌖',detail:'複数の敵へ素早く正確に攻撃を切り替える。',time:'30秒'},
   {id:'SPACING',key:'3',name:'距離管理',tag:'SPACING',icon:'◎',detail:'自分の射程内、敵の危険範囲外を保つ。',time:'30秒'},
-  {id:'DODGE',key:'4',name:'スキルショット回避',tag:'DODGE',icon:'◇',detail:'飛んでくる弾を横移動で避ける。',time:'30秒'},
+  {id:'DODGE',key:'4',name:'スキルショット回避',tag:'DODGE',icon:'◇',detail:'対面チャンピオンのスキルを横移動で避ける。',time:'30秒'},
   {id:'CS',key:'5',name:'ラストヒット',tag:'LANE CS',icon:'✦',detail:'6対6のミニオン戦闘で最後の一撃を取る。',time:'45秒'},
   {id:'COMBINED',key:'6',name:'攻撃と回避',tag:'KITE + DODGE',icon:'⚔',detail:'攻撃のリズムを保ちながら弾を避ける。',time:'40秒'},
   {id:'LANE',key:'7',name:'レーンフェーズ',tag:'CS + HARASS',icon:'≋',detail:'CSと敵チャンピオンのハラス回避を両立する。',time:'45秒'},
@@ -28,6 +29,7 @@ function renderSelection() {
   document.querySelector('#championRange').textContent=profile.range;
   document.querySelector('#championSpeed').textContent=profile.as.toFixed(3);
   document.querySelector('#championTip').textContent=profile.tip;
+  const kit=abilityKit(profile.id);document.querySelector('#championSkills').innerHTML='QWER'.split('').map(key=>`<span title="${kit[key].name}：${kit[key].description}"><img src="./assets/abilities/${kit[key].icon}" alt="${kit[key].name}"/><kbd>${key}</kbd></span>`).join('');
   document.querySelector('#launchName').textContent=drill.name+'を開始';
   document.querySelector('#selectedLesson').textContent=modeLesson(drill.id);
   document.querySelectorAll('[data-difficulty]').forEach(button=>{const selected=Number(button.dataset.difficulty)===state.difficultyIndex;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));});
@@ -49,6 +51,7 @@ export function launchTraining() {
   state.coachEnabled=document.querySelector('#coachToggle').checked;
   selectChampion(state.lobbyChampion);
   setMode(state.lobbyMode);
+  initializeAbilityHud();state.cameraLocked=true;state.cameraFocus.copy(state.player.position);state.pointerInside=false;
   document.querySelector('#playChampion').textContent=state.selectedChampion.name;
   document.querySelector('#playPortrait').src=`./assets/champions/${state.selectedChampion.id}.png`;
   document.querySelector('#playAttackSpeed').textContent=state.ATTACK_SPEED.toFixed(3);
@@ -71,5 +74,5 @@ export function initializeLobby() {
   document.querySelector('#returnLobby').addEventListener('click',openLobby);
   document.querySelector('#resultMenu').addEventListener('click',openLobby);
   document.querySelector('#resultRetry').addEventListener('click',launchTraining);
-  buildArena('FREE');bindCoach();openLobby();
+  buildArena('FREE');bindCoach();bindAbilityHud();openLobby();
 }
