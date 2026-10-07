@@ -40,6 +40,7 @@ export function issueStop() {
   state.rightMouseHeld = false;
 }
 export function moveToward(point, dt, stopDistance = 0) {
+  if(state.playerRootUntil>performance.now()/1000)return false;
   const delta = new THREE.Vector3().subVectors(point, state.player.position);
   delta.y = 0;
   const dist = delta.length();
@@ -52,6 +53,7 @@ export function moveToward(point, dt, stopDistance = 0) {
   return dist - step <= stopDistance + .025;
 }
 export function moveTowardTarget(e, dt) {
+  if(state.playerRootUntil>performance.now()/1000)return false;
   const stop = state.ATTACK_RANGE + state.PLAYER_RADIUS + e.radius;
   const delta = new THREE.Vector3().subVectors(e.group.position, state.player.position);
   delta.y = 0;

@@ -3,7 +3,7 @@
     "all 40 Q/W/E/R slots execute their training behavior; Vayne W correctly stays passive",
     "Caitlyn R releases after the channel and another champion can intercept it",
     "Ezreal W mark detonates on Q; hit reduces cooldowns; skills do not inflate AA counts",
-    "Caitlyn net damages/slows forward and moves backward",
+    "Caitlyn net casts before a backward dash and damages/slows forward",
     "Vayne third basic hit procs silver bolts",
     "Vayne condemn into arena wall adds stun and damage",
     "Ashe Q requires four landed attacks and then raises attack tempo",

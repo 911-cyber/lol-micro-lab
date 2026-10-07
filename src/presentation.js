@@ -91,7 +91,7 @@ export function markVisual(enemy, now) {
 }
 export function updatePresentation(dt, now) {
   const meter=document.querySelector('#attackMeter');
-  if(meter){const windup=state.attackState==='windup',duration=windup?state.WINDUP_TIME:state.ATTACK_INTERVAL;const remaining=windup?state.windupEnd-now:state.nextAttackReady-now;meter.style.width=`${Math.round(100*THREE.MathUtils.clamp(1-remaining/duration,0,1))}%`;meter.style.background=windup?'#e8bb67':'#69d9ec';meter.setAttribute('aria-label',windup?'発射前':'発射後・移動可能');}
+  if(meter){const a=state.abilities,cast=a?.cast,channel=a?.channel,busy=channel||a?.dash||a?.charge||a?.buffs?.kaisaCharge>now,windup=!!cast||state.attackState==='windup',duration=cast?cast.until-cast.started:windup?state.WINDUP_TIME:state.ATTACK_INTERVAL;const remaining=cast?cast.until-now:windup?state.windupEnd-now:state.nextAttackReady-now;meter.style.width=`${busy&&!cast?100:Math.round(100*THREE.MathUtils.clamp(1-remaining/duration,0,1))}%`;meter.style.background=windup||(channel&&channel.kind!=='lucian')?'#e8bb67':'#69d9ec';meter.setAttribute('aria-label',cast?'スキル詠唱中':channel?channel.kind==='lucian'?'連射中・移動可能（AA不可）':'チャネリング中・移動不可':busy?'スキル動作中・AA不可':windup?'発射前':'発射後・移動可能');}
   for(let i=effects.length-1;i>=0;i--){const e=effects[i];e.life-=dt;const progress=1-Math.max(0,e.life)/e.total;e.mesh.scale.setScalar(1+progress*2);e.mesh.traverse(o=>{if(o.material)o.material.opacity=(1-progress)*.8;});if(e.life<=0){state.scene.remove(e.mesh);dispose(e.mesh);effects.splice(i,1);}}
   for(const e of state.enemies)if(e.alive)markVisual(e,now);
 }

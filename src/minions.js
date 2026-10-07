@@ -37,11 +37,15 @@ export function makeMinionHpBar(unit) {
 export function updateMinionHpBar(unit) {
   if (!unit.hpBar) return;
   const ratio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
-  const y = unit.type === 'champion'||unit.type==='caster' ? 2.65 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
+  const y = unit.type!=='minion' ? unit.group.userData.profile?3.65:2.45 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
   unit.hpBar.root.position.set(unit.group.position.x, y, unit.group.position.z);
-  unit.hpBar.root.visible = (state.mode === state.MODE.CS || state.mode === state.MODE.LANE || unit.type==='caster') && unit.alive && unit.group.visible;
+  unit.hpBar.root.quaternion.copy(state.camera.quaternion);
+  unit.hpBar.root.visible = (unit.type!=='minion'||state.mode === state.MODE.CS || state.mode === state.MODE.LANE) && unit.alive && unit.group.visible;
   unit.hpBar.fill.scale.x = 1.49 * ratio;
   unit.hpBar.fill.position.x = -.745 * (1 - ratio);
+}
+export function updateEnemyHpBars(){
+  for(const enemy of [...state.enemies,...state.alliedMinions]){if(enemy.type!=='minion'&&!enemy.hpBar&&enemy.alive&&enemy.group.visible)makeMinionHpBar(enemy);updateMinionHpBar(enemy);}
 }
 export function makeLastHitIndicator(e) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(.62, .73, 36), new THREE.MeshBasicMaterial({

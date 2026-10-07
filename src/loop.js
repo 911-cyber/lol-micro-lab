@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { updateCameraMotion, updateCameraTransform } from './camera.js';
 import { updateOrder, updateProjectiles } from './combat.js';
 import { respawnEnemies } from './entities.js';
-import { updateCsMode } from './minions.js';
+import { updateCsMode, updateEnemyHpBars } from './minions.js';
 import { updateLane } from './lane.js';
 import { updateKiteMode, updateTargetMode, updateSpacingMode, updateDodgeMode, updateModeTimer } from './drills.js';
 import { updateVisuals, updateHud } from './ui.js';
@@ -32,6 +32,7 @@ export function animate(ms) {
   updateVisuals(dt);
   updateCameraMotion(dt);
   updateCameraTransform();
+  updateEnemyHpBars();
   updateHud(now);
   animateChampion(dt,now);updatePresentation(dt,now);updateCoach(dt);
   state.renderer.render(state.scene, state.camera);
