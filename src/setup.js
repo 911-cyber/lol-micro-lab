@@ -63,7 +63,8 @@ export function initializeGame() {
     SPACING: 'SPACING',
     DODGE: 'DODGE',
     CS: 'CS',
-    COMBINED: 'COMBINED'
+    COMBINED: 'COMBINED',
+    LANE: 'LANE'
   });
   state.mode = state.MODE.FREE;
   state.DIFFICULTIES = [{
@@ -210,6 +211,8 @@ export function initializeGame() {
     color: 0xff737d
   });
   state.skillshots = [];
+  state.laneData = null;
+  state.laneMetrics = { fired: 0, hit: 0, dodged: 0, damage: 0 };
   state.skillGeom = new THREE.SphereGeometry(.22, 10, 8);
   state.skillMat = new THREE.MeshBasicMaterial({
     color: 0x79d8ff

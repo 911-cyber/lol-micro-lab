@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LoL Micro Lab — Training Suite v1.0</title>
+  <title>LoL Micro Lab — Training Suite v1.1</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -11,8 +11,8 @@
   <div id="hud">
     <section class="panel intro">
       <div class="eyebrow">LOL MICRO LAB • TRAINING SUITE</div>
-      <h1>Training Suite v1.0</h1>
-      <p>Lane CS更新：LoL風HPバーとミニオン同士の実戦的ラストヒット練習。</p>
+      <h1>Training Suite v1.1</h1>
+      <p>7キー：Lane Phase。敵チャンピオンのハラスを避けながらCSを取る練習。</p>
     </section>
 
     <section class="panel state">
@@ -30,6 +30,7 @@
       <div><kbd>4</kbd><span>Dodge</span></div>
       <div><kbd>5</kbd><span>Lane CS / Last Hit</span></div>
       <div><kbd>6</kbd><span>Kite + Dodge</span></div>
+      <div><kbd>7</kbd><span>Lane Phase / CS + Harass</span></div>
       <div><kbd>D</kbd><span>Difficulty</span></div>
       <div><kbd>R</kbd><span>Restart Mode</span></div>
       <div><kbd>Esc</kbd><span>Free Mode</span></div>
@@ -65,7 +66,7 @@
     </section>
 
     <div id="modeBanner">FREE MODE</div>
-    <div id="objectiveBanner">1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO</div>
+    <div id="objectiveBanner">1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO • 7 LANE</div>
     <div id="toast"></div>
 
     <section id="resultPanel" class="result-panel">
@@ -73,7 +74,7 @@
       <div class="result-head"><b id="resultGrade">A</b><div><h2 id="resultTitle">KITING</h2><p id="resultScore">SCORE 0</p></div></div>
       <div id="resultStats" class="result-stats"></div>
       <div class="diagnosis"><span>NEXT FOCUS</span><p id="resultDiagnosis">—</p></div>
-      <div class="result-foot">1〜6で次の練習 / Rで再挑戦 / Escで閉じる</div>
+      <div class="result-foot">1〜7で次の練習 / Rで再挑戦 / Escで閉じる</div>
     </section>
   </div>
 

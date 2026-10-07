@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { edgeDistance } from './combat.js';
 import { resetEntities, createEnemy, livingEnemies } from './entities.js';
 import { spawnWave } from './minions.js';
+import { resetLane, startLane } from './lane.js';
 import { toast, hideResult, showResult } from './ui.js';
 export function resetStats() {
   state.hits = 0;
@@ -18,6 +19,7 @@ export function resetStats() {
   state.skillshotsHit = 0;
   state.sessionDuration = 0;
   state.lastSelectedTarget = null;
+  state.laneMetrics = { fired: 0, hit: 0, dodged: 0, damage: 0 };
   state.modeData.time = 0;
   state.modeData.nextSpawn = 0;
   state.modeData.nextEnemyAttack = 0;
@@ -34,6 +36,7 @@ export function setMode(next, opts = {}) {
   const keepStats = !!opts.keepStats,
     keepResult = !!opts.keepResult;
   state.mode = next;
+  resetLane();
   resetEntities();
   if (!keepStats) resetStats();
   if (!keepResult) hideResult();
@@ -49,7 +52,7 @@ export function setMode(next, opts = {}) {
   state.player.position.set(-4, 0, 2);
   if (state.mode === state.MODE.FREE) {
     state.modeBanner.textContent = opts.complete ? `${opts.complete} COMPLETE` : 'FREE MODE';
-    state.objectiveBanner.textContent = opts.complete ? 'リザルトを確認。1〜6で次の練習を開始' : '1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO';
+    state.objectiveBanner.textContent = opts.complete ? 'リザルトを確認。1〜7で次の練習を開始' : '1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO • 7 LANE';
     return;
   }
   if (state.mode === state.MODE.KITE) {
@@ -106,6 +109,14 @@ export function setMode(next, opts = {}) {
     state.sessionDuration = 40;
     state.modeData.nextSpawn = .65;
     state.rangeRing.visible = true;
+  }
+  if (state.mode === state.MODE.LANE) {
+    state.modeBanner.textContent = 'LANE PHASE — 45s';
+    state.objectiveBanner.textContent = '赤HPバーでCS。オレンジの予告線から横へ移動してハラスを避ける';
+    state.modeData.time = 45;
+    state.sessionDuration = 45;
+    spawnWave();
+    startLane();
   }
   toast(`${state.mode} START — ${state.difficulty().name}`, 'info');
 }
@@ -213,9 +224,9 @@ export function updateDodgeMode(dt) {
 export function updateModeTimer(dt) {
   if (state.mode === state.MODE.FREE) return;
   state.modeData.time = Math.max(0, state.modeData.time - dt);
-  const label = state.mode === state.MODE.CS ? `CS ${state.cs} • MISS ${state.missedCs} • ${state.modeData.time.toFixed(1)}s` : `${state.mode} • ${state.modeData.time.toFixed(1)}s`;
+  const label = state.mode === state.MODE.LANE ? `LANE • CS ${state.cs} • MISS ${state.missedCs} • HIT ${state.laneMetrics.hit} • ${state.modeData.time.toFixed(1)}s` : state.mode === state.MODE.CS ? `CS ${state.cs} • MISS ${state.missedCs} • ${state.modeData.time.toFixed(1)}s` : `${state.mode} • ${state.modeData.time.toFixed(1)}s`;
   state.modeBanner.textContent = label;
-  if (state.modeData.time <= 0) {
+  if (state.modeData.time <= 0 || state.mode === state.MODE.LANE && state.playerHp <= 0) {
     const finished = state.mode;
     showResult(finished);
     setMode(state.MODE.FREE, {
