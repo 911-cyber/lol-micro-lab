@@ -18,9 +18,10 @@ class Element {
   get classList() { return { add: v => this.className = v, remove: () => this.className = '', contains: v => this.className === v }; }
 }
 
-async function game(THREE, baseline) {
+async function game(THREE, baseline, options = {}) {
   let time = 1000, frame, seed = 123456;
   const dom = new Map(), win = new Element();
+  if(options.AudioContext)win.AudioContext=options.AudioContext;
   const math = Object.create(Math);
   math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   const store = new Map();

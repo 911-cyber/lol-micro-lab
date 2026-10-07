@@ -5,6 +5,7 @@ import { buildArena } from './arena.js';
 import { setMode } from './drills.js';
 import { modeLesson, startCoach, bindCoach } from './coach.js';
 import { abilityKit, initializeAbilityHud, bindAbilityHud } from './abilities.js';
+import { unlockSound, bindSoundControl } from './presentation.js';
 
 export const DRILLS = [
   {id:'KITE',key:'1',name:'カイティング',tag:'ATTACK + MOVE',icon:'↗',detail:'攻撃したら移動。追いつかれずにダメージを出す。',time:'30秒'},
@@ -70,9 +71,9 @@ export function initializeLobby() {
   document.querySelectorAll('[data-difficulty]').forEach(button=>button.addEventListener('click',()=>{
     state.difficultyIndex=Number(button.dataset.difficulty);document.querySelectorAll('[data-difficulty]').forEach(b=>{const selected=b===button;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});
   }));
-  document.querySelector('#launchTraining').addEventListener('click',launchTraining);
+  document.querySelector('#launchTraining').addEventListener('click',()=>{unlockSound();launchTraining();});
   document.querySelector('#returnLobby').addEventListener('click',openLobby);
   document.querySelector('#resultMenu').addEventListener('click',openLobby);
   document.querySelector('#resultRetry').addEventListener('click',launchTraining);
-  buildArena('FREE');bindCoach();bindAbilityHud();openLobby();
+  buildArena('FREE');bindCoach();bindAbilityHud();bindSoundControl();openLobby();
 }

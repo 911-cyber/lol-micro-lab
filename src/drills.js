@@ -10,6 +10,7 @@ import { startCoach } from './coach.js';
 import { disposeObject } from './champions.js';
 import { resetAbilities, enemyMovement, hurtPlayer } from './abilities.js';
 import { resetOpponents, startOpponents } from './enemy-casters.js';
+import { clearPresentation } from './presentation.js';
 export function resetStats() {
   state.hits = 0;
   state.cancels = 0;
@@ -50,6 +51,7 @@ export function setMode(next, opts = {}) {
     return;
   }
   resetEntities();
+  clearPresentation();
   if (!keepStats) resetStats();
   if(state.selectedChampion)resetAbilities();
   if (!keepResult) hideResult();

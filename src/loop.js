@@ -11,6 +11,7 @@ import { animateChampion } from './champions.js';
 import { updateCoach } from './coach.js';
 import { updateAbilities } from './abilities.js';
 import { updateOpponents } from './enemy-casters.js';
+import { updatePresentation } from './presentation.js';
 export function animate(ms) {
   const now = ms / 1000,
     dt = Math.min(.05, (ms - state.lastTime) / 1000 || 0);
@@ -32,7 +33,7 @@ export function animate(ms) {
   updateCameraMotion(dt);
   updateCameraTransform();
   updateHud(now);
-  animateChampion(dt,now);updateCoach(dt);
+  animateChampion(dt,now);updatePresentation(dt,now);updateCoach(dt);
   state.renderer.render(state.scene, state.camera);
   requestAnimationFrame(animate);
 }

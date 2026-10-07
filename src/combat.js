@@ -5,6 +5,7 @@ import { livingEnemies } from './entities.js';
 import { toast, flashTarget, showMarker } from './ui.js';
 import { championProjectile, disposeObject } from './champions.js';
 import { basicAttackDamage, onBasicHit } from './abilities.js';
+import { poseWindup, poseRelease, cancelPose, burst, playCue } from './presentation.js';
 export function edgeDistance(e) {
   return Math.max(0, state.player.position.distanceTo(e.group.position) - state.PLAYER_RADIUS - e.radius);
 }
@@ -13,6 +14,7 @@ export function enemyInAttackRange(e) {
 }
 export function cancelWindup(reason = 'move') {
   if (state.attackState !== 'windup') return false;
+  cancelPose(state.player);
   state.attackState = 'idle';
   state.attackTarget = null;
   state.nextAttackReady = performance.now() / 1000;
@@ -70,6 +72,7 @@ export function startAttack(e, now) {
   state.attackState = 'windup';
   state.attackTarget = e;
   state.windupEnd = now + state.WINDUP_TIME;
+  poseWindup(state.player,now,state.WINDUP_TIME);
   state.nextAttackReady = now + state.ATTACK_INTERVAL;
   facePoint(e.group.position);
   return true;
@@ -78,6 +81,7 @@ export function launchProjectile(e, now) {
   state.attackState = 'idle';
   state.attackTarget = null;
   state.lastShotAt = now;
+  poseRelease(state.player,now);
   state.awaitingKiteMove = true;
   state.championShots = (state.championShots || 0) + 1;
   const mesh = state.selectedChampion ? championProjectile(state.selectedChampion) : new THREE.Mesh(state.projectileGeom, state.projectileMat.clone());
@@ -132,6 +136,7 @@ export function updateProjectiles(dt, now) {
       if(state.selectedChampion)disposeObject(p.mesh);
       state.projectiles.splice(i, 1);
       damageEnemy(e, p.damage ?? state.ATTACK_DAMAGE, now, true);
+      burst(aim,state.selectedChampion?.id);playCue(state.selectedChampion?.id,'impact');
       onBasicHit(e,now,p.damage??state.ATTACK_DAMAGE);
     } else {
       p.mesh.lookAt(aim);

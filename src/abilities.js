@@ -7,6 +7,7 @@ import { clampPoint, issueStop } from './player.js';
 import { disposeObject } from './champions.js';
 import { screenToGround } from './camera.js';
 import { toast } from './ui.js';
+import { signatureProjectile, poseWindup, poseRelease, burst, playCue } from './presentation.js';
 
 // Costs and cooldowns are deliberately shorter training rules, not live LoL balance.
 const RULES={
@@ -24,7 +25,8 @@ const RULES={
 export function abilityKit(id=state.selectedChampion?.id||'Ashe'){
  const data=ABILITY_DATA[id];return Object.fromEntries('QWER'.split('').map((key,i)=>[key,{...data[key],cooldown:RULES[id][i][0],cost:RULES[id][i][1],description:RULES[id][i][2],passive:id==='Vayne'&&key==='W'}]));
 }
-export function createSkillBolt(color=0x65d9ff,radius=.16,arrow=false){
+export function createSkillBolt(color=0x65d9ff,radius=.16,arrow=false,identity=null){
+ const signature=identity&&signatureProjectile(identity.id,identity.key,radius);if(signature)return signature;
  const root=new THREE.Group(),mat=new THREE.MeshBasicMaterial({color});
  const tip=new THREE.Mesh(arrow?new THREE.ConeGeometry(radius*1.5,.65,6):new THREE.SphereGeometry(radius,10,8),mat);if(arrow)tip.rotation.x=Math.PI/2;root.add(tip);
  const tail=new THREE.Mesh(new THREE.CylinderGeometry(radius*.3,radius*.6,.9,6),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.45}));tail.rotation.x=Math.PI/2;tail.position.z=-.4;root.add(tail);return root;
@@ -68,6 +70,7 @@ function dash(point,distance,now,blink=false){
 }
 function hit(enemy,damage,now,effect={}){
  if(!enemy?.alive)return;state.abilities.hits++;
+ burst(enemy.group.position.clone().setY(.3),state.selectedChampion.id);playCue(state.selectedChampion.id,'impact');
  if(effect.missingHp)damage+=(enemy.maxHp-enemy.hp)*.18;
  if(enemy.mark==='Ezreal'){damage+=60;enemy.mark=null;fx(enemy.group.position,1.1,0xeac45c);}if(enemy.blight&&state.selectedChampion.id==='Varus'){damage+=enemy.blight*25;enemy.blight=0;}
  damageEnemy(enemy,damage,now,true,true);enemy.lastPlayerHit=now;
@@ -81,9 +84,10 @@ function hit(enemy,damage,now,effect={}){
  if(effect.chain)for(const e of livingEnemies())if(e!==enemy&&e.type!=='minion'&&e.group.position.distanceTo(enemy.group.position)<4){e.rootUntil=now+1.5;damageEnemy(e,70,now,true,true);fx(e.group.position,.8,0xb774ec);}
  if(state.selectedChampion.id==='Ezreal')state.abilities.buffs.as=now+4;
 }
-function shot(point,{damage=90,speed=22,range=14,radius=.25,color=state.selectedChampion.color,pierce=false,championOnly=false,target=null,track=null,effect={},arrow=false,delay=0,hitSet=null,visualOnly=false}={}){
- const mesh=createSkillBolt(color,radius,arrow),origin=state.player.position.clone().setY(1.05),dir=direction(point);mesh.position.copy(origin);mesh.lookAt(origin.clone().add(dir));state.scene.add(mesh);
- state.abilities.shots.push({mesh,dir,damage,speed,range,radius,pierce,championOnly,target,track,effect,traveled:0,hit:hitSet||new Set(),delay,visualOnly});
+function shot(point,{damage=90,speed=22,range=14,radius=.25,color=state.selectedChampion.color,pierce=false,championOnly=false,target=null,track=null,effect={},arrow=false,delay=0,hitSet=null,visualOnly=false,visual='Q'}={}){
+ const mesh=createSkillBolt(color,radius,arrow,{id:state.selectedChampion.id,key:visual}),origin=state.player.position.clone().setY(1.05),dir=direction(point);mesh.position.copy(origin);mesh.lookAt(origin.clone().add(dir));mesh.visible=delay<=0;state.scene.add(mesh);
+ const now=performance.now()/1000;if(state.attackState!=='windup')state.player.lookAt(point.x,0,point.z);if(delay>0)poseWindup(state.player,now,delay,visual);else if(state.attackState!=='windup')poseRelease(state.player,now,visual);
+ state.abilities.shots.push({mesh,dir,damage,speed,range,radius,pierce,championOnly,target,track,effect,traveled:0,hit:hitSet||new Set(),delay,visualOnly,visual,released:delay<=0});
 }
 function fan(point,count,spread,options){const d=direction(point),angle=Math.atan2(d.x,d.z),hitSet=new Set();for(let i=0;i<count;i++){const a=angle+(i-(count-1)/2)*spread;shot(state.player.position.clone().add(new THREE.Vector3(Math.sin(a),0,Math.cos(a))),{...options,hitSet});}}
 function area(point,radius,damage,duration,color=state.selectedChampion.color,effect={slow:.55}){
@@ -114,9 +118,9 @@ export function castSkill(key,point=null,now=performance.now()/1000){
  const instant=['Ashe.Q','Ashe.E','Jinx.Q','Varus.W','Vayne.R','MissFortune.W'];if(!instant.includes(id+'.'+key)){cancelWindup('skill');a.channel=null;}
  switch(id+'.'+key){
  case 'Ashe.Q':a.focus=0;a.buffs.ashe=now+4;break;
- case 'Ashe.W':fan(point,9,.10,{damage:90,range:13,arrow:true,effect:{slow:.5}});break;
- case 'Ashe.E':shot(point,{damage:0,range:30,speed:18,radius:.2,pierce:true,color:0xe9e6ad,visualOnly:true});a.buffs.vision=now+5;fx(point,3,0x74d9cf,2);break;
- case 'Ashe.R':shot(point,{damage:180,range:36,radius:.55,speed:18,championOnly:true,arrow:true,effect:{root:1.6,splash:2.5}});break;
+ case 'Ashe.W':fan(point,9,.10,{damage:90,range:13,arrow:true,visual:'W',effect:{slow:.5}});break;
+ case 'Ashe.E':shot(point,{damage:0,range:30,speed:18,radius:.2,pierce:true,color:0xe9e6ad,visualOnly:true,visual:'E'});a.buffs.vision=now+5;fx(point,3,0x74d9cf,2);break;
+ case 'Ashe.R':shot(point,{damage:180,range:36,radius:.55,speed:18,championOnly:true,arrow:true,visual:'R',effect:{root:1.6,splash:2.5}});break;
  case 'Caitlyn.Q':shot(point,{damage:135,range:13,radius:.45,pierce:true,delay:.5});break;
  case 'Caitlyn.W':trap(point,key,now);break;
  case 'Caitlyn.E':shot(point,{damage:75,range:8,radius:.4,effect:{slow:.5,headshot:true}});dash(state.player.position.clone().addScaledVector(direction(point),-3),3,now);break;
@@ -130,9 +134,9 @@ export function castSkill(key,point=null,now=performance.now()/1000){
  case 'Jhin.E':trap(point,key,now);break;
  case 'Jhin.R':issueStop();a.channel={kind:'jhin',ammo:4,next:now,until:now+10};break;
  case 'Ezreal.Q':shot(point,{damage:100,range:14,effect:{reduce:true}});break;
- case 'Ezreal.W':shot(point,{damage:0,range:14,radius:.35,championOnly:true,color:0xffd76c,effect:{mark:'Ezreal'}});break;
+ case 'Ezreal.W':shot(point,{damage:0,range:14,radius:.35,championOnly:true,color:0xffd76c,visual:'W',effect:{mark:'Ezreal'}});break;
  case 'Ezreal.E':dash(point,4,now,true);{const enemies=livingEnemies().filter(e=>e.group.position.distanceTo(state.player.position)<8).sort((x,y)=>(y.mark==='Ezreal')-(x.mark==='Ezreal')||x.group.position.distanceToSquared(state.player.position)-y.group.position.distanceToSquared(state.player.position));if(enemies[0])shot(enemies[0].group.position,{damage:95,target:enemies[0]});}break;
- case 'Ezreal.R':shot(point,{damage:200,range:40,radius:.8,pierce:true,delay:.7,speed:25});break;
+ case 'Ezreal.R':shot(point,{damage:200,range:40,radius:.8,pierce:true,delay:.7,speed:25,visual:'R'});break;
  case 'Lucian.Q':shot(target.group.position,{damage:110,range:12,pierce:true,radius:.25,speed:60});break;
  case 'Lucian.W':shot(point,{damage:85,range:12,radius:.3,effect:{mark:'Lucian',splash:1.5}});break;
  case 'Lucian.E':dash(point,3.5,now);break;
@@ -188,7 +192,7 @@ export function updateAbilities(dt,now){
   if(c.kind==='lucian'){shot(state.player.position.clone().add(c.dir),{damage:20,range:15,speed:26,radius:.12});c.next=now+.12;}
   if(c.kind==='fortune'){fan(state.player.position.clone().add(c.dir),5,.16,{damage:24,range:13,speed:26,radius:.16,pierce:true});c.next=now+.28;}
  }}
- for(let i=a.shots.length-1;i>=0;i--){const p=a.shots[i];p.delay-=dt;if(p.delay>0)continue;const tracking=p.target||p.track;if(tracking&&!tracking.alive){remove(p.mesh);a.shots.splice(i,1);continue;}
+ for(let i=a.shots.length-1;i>=0;i--){const p=a.shots[i];p.delay-=dt;if(p.delay>0)continue;if(!p.released){p.released=true;p.mesh.visible=true;poseRelease(state.player,now,p.visual);}const tracking=p.target||p.track;if(tracking&&!tracking.alive){remove(p.mesh);a.shots.splice(i,1);continue;}
   if(tracking)p.dir.copy(tracking.group.position).setY(1).sub(p.mesh.position).normalize();
   const previous=p.mesh.position.clone(),step=Math.min(p.range-p.traveled,p.speed*dt);p.mesh.position.addScaledVector(p.dir,step);p.mesh.lookAt(p.mesh.position.clone().add(p.dir));p.traveled+=step;
   const segment=new THREE.Line3(previous,p.mesh.position);let stop=false;

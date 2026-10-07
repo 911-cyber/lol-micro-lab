@@ -7,6 +7,7 @@ import { setEnemyAppearance } from './entities.js';
 import { championProjectile, disposeObject } from './champions.js';
 import { championById } from './roster.js';
 import { enemyMovement, hurtPlayer } from './abilities.js';
+import { poseWindup, poseRelease, burst, playCue } from './presentation.js';
 
 const SETTINGS = [
   { windup: .75, interval: 3, speed: 7.2, damage: 8, movement: 1.3 },
@@ -54,6 +55,7 @@ function prepareShot(now) {
   mesh.position.copy(origin).addScaledVector(direction, SHOT_RANGE / 2).setY(.075);
   state.scene.add(mesh);
   state.mainDummy.group.lookAt(state.player.position.x, 0, state.player.position.z);
+  poseWindup(state.mainDummy.group,now,config.windup,'Q');
   // Lock the aim when the warning appears; moving sideways during windup can evade it.
   state.laneData.warning = { mesh, origin, direction, releaseAt: now + config.windup, config };
   state.laneData.nextAttack = now + config.interval;
@@ -63,6 +65,7 @@ function releaseShot() {
   const warning = state.laneData.warning;
   removeMesh(warning.mesh);
   state.laneData.warning = null;
+  poseRelease(state.mainDummy.group,performance.now()/1000,'Q');
   const mesh = state.selectedChampion?championProjectile(championById('Ezreal')):new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa25c }));
   mesh.position.copy(warning.origin);
   mesh.lookAt(warning.origin.clone().add(warning.direction));
@@ -85,6 +88,7 @@ function updateShots(dt) {
     const closest = segment.closestPointToPoint(player, true, new THREE.Vector3());
     if (closest.distanceTo(player) < HIT_RADIUS) {
       hurtPlayer(shot.config.damage,performance.now()/1000);
+      burst(state.player.position.clone().setY(.3),'Ezreal');playCue('Ezreal','impact');
       state.laneMetrics.hit++;
       state.laneMetrics.damage += shot.config.damage;
       state.score = Math.max(0, state.score - 50);

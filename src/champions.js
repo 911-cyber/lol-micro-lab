@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { championById } from './roster.js';
+import { signatureProjectile, animateRig } from './presentation.js';
 const portraits = new Map();
 
 export function disposeObject(root) {
@@ -11,6 +12,7 @@ export function buildChampion(profile, team = 'ally') {
   const root = new THREE.Group();
   const body = new THREE.Group(); root.add(body);
   const joints = [];
+  const arms = [];
   const mat = color => new THREE.MeshStandardMaterial({color,roughness:.65,metalness:.2});
   const armor = mat(profile.armor), trim = mat(0xc9ad67), hair = mat(profile.hair);
   const skin = mat(profile.id === 'Lucian' ? 0x795346 : 0xd0a88a);
@@ -29,7 +31,7 @@ export function buildChampion(profile, team = 'ally') {
     const leg=new THREE.Group();leg.position.set(side*.18,.9,0);body.add(leg);joints.push(leg);
     cylinder(leg,.125,.14,.72,armor,[0,-.36,0]);box(leg,[.27,.18,.4],armor,[0,-.82,.08]);
     sphere(body,.2,trim,[side*.42,1.61,0]);
-    const arm=new THREE.Group();arm.position.set(side*.4,1.55,0);body.add(arm);
+    const arm=new THREE.Group();arm.position.set(side*.4,1.55,0);body.add(arm);arms.push(arm);
     cylinder(arm,.1,.12,.55,armor,[0,-.25,.1],[.35,0,side*.2]);sphere(arm,.12,skin,[0,-.47,.2]);
   }
   const weapon = new THREE.Group();weapon.position.set(.43,1.2,.38);body.add(weapon);
@@ -76,7 +78,11 @@ export function buildChampion(profile, team = 'ally') {
     const portrait=new THREE.Sprite(new THREE.SpriteMaterial({map:portraits.get(profile.id),depthTest:false,transparent:true}));
     portrait.position.set(0,3.05,0);portrait.scale.set(.65,.65,1);root.add(portrait);
   }
-  root.userData={profile:profile.id,body,weapon,joints,ring};return root;
+  let focusGlow;
+  if(['Ashe','Ezreal'].includes(profile.id)){
+    focusGlow=new THREE.Mesh(new THREE.SphereGeometry(.22,12,8),new THREE.MeshBasicMaterial({color:profile.color,transparent:true,opacity:0,depthWrite:false}));focusGlow.position.set(0,.1,.35);weapon.add(focusGlow);
+  }
+  root.userData={profile:profile.id,body,weapon,joints,arms,ring,focusGlow};return root;
 }
 
 export function selectChampion(id) {
@@ -93,6 +99,7 @@ export function selectChampion(id) {
 }
 
 export function championProjectile(profile) {
+  const signature=signatureProjectile(profile.id);if(signature)return signature;
   const root=new THREE.Group();const mat=new THREE.MeshBasicMaterial({color:profile.color});
   const arrow=['arrow','darkbow','crossbow'].includes(profile.style);
   const geometry=arrow?new THREE.ConeGeometry(.09,.6,6):new THREE.SphereGeometry(profile.style==='magic'||profile.style==='void'?.15:.09,8,6);
@@ -101,10 +108,6 @@ export function championProjectile(profile) {
 }
 
 export function animateChampion(dt, now) {
-  if(!state.selectedChampion)return;
-  const rig=state.player.userData;if(!rig.body)return;
-  const moving=state.order.type==='move'||state.order.type==='attackMove'&&!state.order.target||state.order.type==='attack'&&state.attackState!=='windup'&&state.player.position.distanceTo(state.order.target?.group.position||state.player.position)>state.ATTACK_RANGE+1.4;
-  rig.body.position.y=moving?Math.sin(now*12)*.04:Math.sin(now*2)*.015;
-  rig.joints.forEach((joint,index)=>joint.rotation.x=moving?Math.sin(now*12+index*Math.PI)*.3:0);
-  rig.weapon.rotation.x=state.attackState==='windup'?-.12:Math.max(0,.18-(now-state.lastShotAt)*.6);
+  if(state.selectedChampion)animateRig(state.player,dt,now);
+  for(const enemy of state.enemies)if(enemy.alive)animateRig(enemy.group,dt,now);
 }

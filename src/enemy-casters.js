@@ -8,6 +8,7 @@ import { createSkillBolt, groundCircle, hurtPlayer, enemyMovement } from './abil
 import { disposeObject } from './champions.js';
 import { clampPoint } from './player.js';
 import { toast } from './ui.js';
+import { poseWindup, poseRelease, cancelPose, burst, playCue } from './presentation.js';
 
 const POOL=['Ezreal','Ashe','Jinx','Varus','Caitlyn','Jhin','Kaisa','MissFortune','Lucian'];
 const SPELLS={
@@ -41,28 +42,33 @@ function warning(enemy,now){
  if(profile.shape==='area')mesh=groundCircle(point,profile.width,0xffae6b,.2);
  else{mesh=new THREE.Group();const count=profile.shape==='fan'?5:1;for(let i=0;i<count;i++){const a=angle+(i-(count-1)/2)*.16;const line=new THREE.Mesh(new THREE.PlaneGeometry(profile.width*2,range),new THREE.MeshBasicMaterial({color:0xffad77,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}));line.rotation.set(-Math.PI/2,0,a);line.position.copy(origin).add(new THREE.Vector3(Math.sin(a),0,Math.cos(a)).multiplyScalar(range/2)).setY(.08);mesh.add(line);}state.scene.add(mesh);}
  enemy.group.lookAt(point.x,0,point.z);state.skillshotsFired++;
+ poseWindup(enemy.group,now,windup,profile.key);
  const cast={enemy,id:enemy.castProfile,profile,origin,point,dir,angle,warning:mesh,release:now+windup,shots:[],area:null,life:6,hit:false,resolved:false,nextTick:0};state.opponents.casts.push(cast);
  document.querySelector('#enemyCast').textContent=`${championById(cast.id).name} ${profile.key} — ${ABILITY_DATA[cast.id][profile.key].name}`;
 }
-function release(cast){
+function release(cast,now){
  remove(cast.warning);cast.warning=null;
+ poseRelease(cast.enemy.group,now,cast.profile.key);
  if(cast.profile.shape==='area'){cast.area=groundCircle(cast.point,cast.profile.width,championById(cast.id).color,.4);cast.life=1.5;return;}
  const count=cast.profile.shape==='fan'?5:1;
- for(let i=0;i<count;i++){const angle=cast.angle+(i-(count-1)/2)*.16,dir=new THREE.Vector3(Math.sin(angle),0,Math.cos(angle));const mesh=createSkillBolt(championById(cast.id).color,cast.profile.width,['Ashe','Varus'].includes(cast.id));mesh.position.copy(cast.origin);mesh.lookAt(cast.origin.clone().add(dir));state.scene.add(mesh);cast.shots.push({mesh,dir,traveled:0});}
+ for(let i=0;i<count;i++){const angle=cast.angle+(i-(count-1)/2)*.16,dir=new THREE.Vector3(Math.sin(angle),0,Math.cos(angle));const mesh=createSkillBolt(championById(cast.id).color,cast.profile.width,['Ashe','Varus'].includes(cast.id),{id:cast.id,key:cast.profile.key});mesh.position.copy(cast.origin);mesh.lookAt(cast.origin.clone().add(dir));state.scene.add(mesh);cast.shots.push({mesh,dir,traveled:0});}
 }
 function hit(cast,now){
  if(!cast.hit){cast.hit=true;state.skillshotsHit++;toast(`${championById(cast.id).name} ${cast.profile.key} 被弾 — 予告を横へ避けよう`,'bad');state.score=Math.max(0,state.score-50);}
  hurtPlayer(cast.profile.damage,now);state.playerSlowUntil=now+.45;state.playerSlowFactor=.8;
+ burst(state.player.position.clone().setY(.3),cast.id);playCue(cast.id,'impact');
 }
 export function updateOpponents(dt,now){
  const data=state.opponents;if(!data)return;
  for(let i=0;i<data.casters.length;i++){const enemy=data.casters[i];if(!enemy.alive){if(now>enemy.respawnAt+2){data.pool=(data.pool+1)%POOL.length;assign(enemy,POOL[data.pool]);enemy.group.position.copy(clampPoint(state.player.position.clone().add(new THREE.Vector3(10,0,(i-.5)*6))));}updateMinionHpBar(enemy);continue;}
-  const delta=state.player.position.clone().sub(enemy.group.position).setY(0),distance=delta.length();if(distance>13)enemy.group.position.addScaledVector(delta.normalize(),1.8*dt*enemyMovement(enemy,now));if(distance<7&&distance>0)enemy.group.position.addScaledVector(delta.normalize(),-1*dt*enemyMovement(enemy,now));clampPoint(enemy.group.position);updateMinionHpBar(enemy);
+  const delta=state.player.position.clone().sub(enemy.group.position).setY(0),distance=delta.length(),casting=data.casts.some(c=>c.enemy===enemy&&c.warning);
+  if(!casting&&distance>0){const direction=delta.normalize(),speed=enemyMovement(enemy,now);if(distance>11)enemy.group.position.addScaledVector(direction,1.8*dt*speed);else if(distance<8)enemy.group.position.addScaledVector(direction,-1.4*dt*speed);else enemy.group.position.addScaledVector(new THREE.Vector3(-direction.z,0,direction.x),Math.sin(now*.65+i*2)*.85*dt*speed);clampPoint(enemy.group.position);enemy.group.lookAt(state.player.position.x,0,state.player.position.z);}
+  updateMinionHpBar(enemy);
  }
  if(now>=data.rotation){data.rotation=now+10;const enemy=data.casters[data.turn%data.casters.length];if(enemy.alive&&!data.casts.some(c=>c.enemy===enemy&&c.warning)){data.pool=(data.pool+1)%POOL.length;assign(enemy,POOL[data.pool]);}}
  if(now>=data.next){data.next=now+[2.6,2.0,1.6][state.difficultyIndex];const available=data.casters.filter(e=>e.alive&&enemyMovement(e,now)>0&&e.group.position.distanceTo(state.player.position)<22);if(available.length){const enemy=available[data.turn++%available.length];warning(enemy,now);}}
  for(let i=data.casts.length-1;i>=0;i--){const cast=data.casts[i];cast.life-=dt;
-  if(cast.warning){if(!cast.enemy.alive||cast.enemy.rootUntil>now){remove(cast.warning);data.casts.splice(i,1);continue;}if(now>=cast.release)release(cast);else continue;}
+  if(cast.warning){if(!cast.enemy.alive||cast.enemy.rootUntil>now){cancelPose(cast.enemy.group);remove(cast.warning);data.casts.splice(i,1);continue;}if(now>=cast.release)release(cast,now);else continue;}
   if(cast.area){cast.nextTick-=dt;if(cast.nextTick<=0){cast.nextTick=.4;if(state.player.position.distanceTo(cast.point)<cast.profile.width+.3)hit(cast,now);}}
   for(let j=cast.shots.length-1;j>=0;j--){const shot=cast.shots[j],previous=shot.mesh.position.clone(),step=cast.profile.speed*dt;shot.mesh.position.addScaledVector(shot.dir,step);shot.traveled+=step;const player=state.player.position.clone().setY(1),segment=new THREE.Line3(previous,shot.mesh.position);
    const collision=!cast.hit&&segment.closestPointToPoint(player,true,new THREE.Vector3()).distanceTo(player)<.5+cast.profile.width;
