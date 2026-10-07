@@ -161,8 +161,8 @@ export function updateHud(now) {
   state.difficultyStateEl.textContent = state.difficulty().name;
   const attackCycle=document.querySelector('#attackCycle');
   if(attackCycle&&state.selectedChampion)attackCycle.textContent=state.reloadUntil>now?`リロード ${(state.reloadUntil-now).toFixed(1)}s`:state.selectedChampion.id==='Jhin'?`ウィスパー ${4-(state.championShots||0)%4} / 4発`:`${state.selectedChampion.weapon} · AD ${state.ATTACK_DAMAGE}`;
-  state.orderStateEl.textContent = state.attackState === 'windup' ? 'WINDUP' : state.order.type.toUpperCase();
-  state.orderStateEl.className = state.attackState === 'windup' ? 'attacking' : state.order.type === 'move' ? 'moving' : '';
+    state.orderStateEl.textContent = state.abilities?.cast ? 'CAST '+state.abilities.cast.key : state.abilities?.dash ? 'DASH' : state.abilities?.channel ? 'CHANNEL R' : state.attackState === 'windup' ? 'WINDUP' : state.order.type.toUpperCase();
+    state.orderStateEl.className = state.abilities?.cast||state.abilities?.channel||state.attackState === 'windup' ? 'attacking' : state.order.type === 'move' ? 'moving' : '';
   state.hitsStateEl.textContent = state.hits;
   state.cancelStateEl.textContent = state.cancels;
   state.kiteStateEl.textContent = state.cleanKites;

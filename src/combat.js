@@ -4,13 +4,13 @@ import { clampPoint, facePoint, moveToward, moveTowardTarget } from './player.js
 import { livingEnemies } from './entities.js';
 import { toast, flashTarget, showMarker } from './ui.js';
 import { championProjectile, disposeObject } from './champions.js';
-import { basicAttackDamage, onBasicHit } from './abilities.js';
+import { basicAttackDamage, onBasicHit, cancelChannel } from './abilities.js';
 import { poseWindup, poseRelease, cancelPose, burst, playCue } from './presentation.js';
 export function edgeDistance(e) {
   return Math.max(0, state.player.position.distanceTo(e.group.position) - state.PLAYER_RADIUS - e.radius);
 }
 export function enemyInAttackRange(e) {
-  return e?.alive && edgeDistance(e) <= state.ATTACK_RANGE + .001;
+  return e?.alive && edgeDistance(e) <= state.ATTACK_RANGE * (state.selectedChampion?.id==='Caitlyn'&&e.headshot?2:1) + .001;
 }
 export function cancelWindup(reason = 'move') {
   if (state.attackState !== 'windup') return false;
@@ -34,6 +34,7 @@ export function notePostShotMove() {
 }
 export function issueAttack(target) {
   if (!target?.alive) return;
+  cancelChannel('attack');
   state.order = {
     type: 'attack',
     point: target.group.position.clone(),
@@ -55,6 +56,7 @@ export function nearestEnemyToPoint(point, rangeOnly = true) {
   return best;
 }
 export function issueAttackMove(point) {
+  cancelChannel('attack');
   point = clampPoint(point.clone());
   cancelWindup('move');
   notePostShotMove();
@@ -68,6 +70,7 @@ export function issueAttackMove(point) {
   if (target) flashTarget(target);
 }
 export function startAttack(e, now) {
+  if(state.abilities?.cast||state.abilities?.dash||state.abilities?.charge||state.abilities?.channel||state.abilities?.buffs.kaisaCharge>now)return false;
   if (!e?.alive || now < state.nextAttackReady || state.attackState === 'windup' || !enemyInAttackRange(e)) return false;
   state.attackState = 'windup';
   state.attackTarget = e;
@@ -145,8 +148,8 @@ export function updateProjectiles(dt, now) {
   }
 }
 export function updateOrder(dt, now) {
-  if(state.playerRootUntil>now)return;
-  if(state.abilities?.charge||state.abilities?.buffs.kaisaCharge>now){if(state.order.type==='move')moveToward(state.order.point,dt);return;}
+  if(state.abilities?.cast||state.abilities?.dash)return;
+  if(state.abilities?.charge||state.abilities?.buffs.kaisaCharge>now){if(state.order.type==='move'||state.order.type==='attackMove')moveToward(state.order.point,dt);else if(state.order.type==='attack'&&state.order.target?.alive&&!enemyInAttackRange(state.order.target))moveTowardTarget(state.order.target,dt);return;}
   if(state.abilities?.channel&&state.abilities.channel.kind!=='lucian')return;
   if(state.abilities?.channel?.kind==='lucian'&&state.order.type!=='move')return;
   if (state.attackState === 'windup') {
