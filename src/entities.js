@@ -106,6 +106,7 @@ export function resetEntities() {
   state.mainDummy.alive = true;
   state.mainDummy.group.visible = true;
   state.mainDummy.hp = state.mainDummy.maxHp = 700;
+  state.mainDummy.microOpeningUntil=0;state.mainDummy.recoverUntil=0;
   state.mainDummy.type = 'dummy';
   state.mainDummy.name = 'TRAINING DUMMY';
   state.mainDummy.radius = .76;
@@ -119,6 +120,7 @@ export function resetEntities() {
   state.rangeRing.visible = false;
 }
 export function respawnEnemies(now) {
+  if (state.mode==='DUEL') return;
   if (state.mode === state.MODE.CS || state.mode === state.MODE.LANE || state.mode === state.MODE.DODGE) return;
   for (const e of state.enemies) {
     if(e.type==='caster')continue;

@@ -50,6 +50,7 @@ export function refreshPlayerStats(now=performance.now()/1000){
  const p=state.selectedChampion;if(!p)return;const a=state.abilities,b=a?.buffs||{};
  const training=['KITE','COMBINED'].includes(state.mode)?1.65:1;
  let as=p.as*training,move=p.move*.01,damage=p.damage,range=p.range*.01;
+ if(state.mode==='DUEL'&&state.duel){const items=state.duel.items;damage*=1+items.filter(i=>i==='blade').length*.2;as*=1+items.filter(i=>i==='bow').length*.18;move*=1+items.filter(i=>i==='boots').length*.1;}
  if(b.as>now)as*=1.5;if(b.ashe>now){as*=1.45;damage*=1.2;}if(a?.rocket){range+=1.5;as*=.85;}else if(p.id==='Jinx'&&b.jinxRamp>now)as*=1+(a.jinxStacks||0)*.12;
  if(p.id==='Kaisa'&&b.kaisaCharge<=now&&b.kaisaAttackUntil>now)as*=1.5;
  if(p.id==='Ezreal'&&b.ezrealStacks>now)as*=1+(a.ezrealStacks||0)*.1;
@@ -61,10 +62,11 @@ export function refreshPlayerStats(now=performance.now()/1000){
 }
 export function enemyMovement(enemy,now=performance.now()/1000){return enemy.rootUntil>now?0:enemy.slowUntil>now?(enemy.slowFactor||.55):1;}
 export function hurtPlayer(amount,now=performance.now()/1000){
+ if(state.mode==='DUEL'&&state.duel)amount*=1-Math.min(.6,state.duel.items.filter(i=>i==='armor').length*.15);
  const shield=Math.min(state.playerShield||0,amount);state.playerShield=Math.max(0,(state.playerShield||0)-shield);state.playerHp=Math.max(0,state.playerHp-(amount-shield));state.lastPlayerDamage=now;return amount-shield;
 }
 function targetAt(point,range=9,championOnly=false){
- return livingEnemies().filter(e=>state.player.position.distanceTo(e.group.position)<=range+e.radius&&e.group.position.distanceTo(point)<=e.radius+1.25&&(!championOnly||e.type!=='minion')).sort((a,b)=>a.group.position.distanceToSquared(point)-b.group.position.distanceToSquared(point))[0];
+ return livingEnemies().filter(e=>e.type!=='tower'&&state.player.position.distanceTo(e.group.position)<=range+e.radius&&e.group.position.distanceTo(point)<=e.radius+1.25&&(!championOnly||(e.type!=='minion'&&e.type!=='tower'))).sort((a,b)=>a.group.position.distanceToSquared(point)-b.group.position.distanceToSquared(point))[0];
 }
 function direction(point){const d=point.clone().sub(state.player.position).setY(0);if(d.lengthSq()<.001)d.set(1,0,0);return d.normalize();}
 function dash(point,distance,now,blink=false){
@@ -73,7 +75,7 @@ function dash(point,distance,now,blink=false){
  fx(before,.75,blink?0xffde6a:state.selectedChampion.color);fx(destination,.9,blink?0xffde6a:state.selectedChampion.color);
 }
 function hit(enemy,damage,now,effect={}){
- if(!enemy?.alive)return;state.abilities.hits++;
+ if(!enemy?.alive||enemy.type==='tower')return;state.abilities.hits++;
  burst(enemy.group.position.clone().setY(.3),state.selectedChampion.id);playCue(state.selectedChampion.id,'impact');
  if(effect.missingHp)damage+=(enemy.maxHp-enemy.hp)*.18;
  if(enemy.mark==='Ezreal'){damage+=60;enemy.mark=null;fx(enemy.group.position,1.1,0xeac45c);}if(enemy.blight&&state.selectedChampion.id==='Varus'){damage+=enemy.blight*25;enemy.blight=0;}
@@ -190,7 +192,7 @@ export function basicAttackDamage(now){
  return damage;
 }
 export function onBasicHit(enemy,now,damage){
- const a=state.abilities;if(!a||!enemy)return;const id=state.selectedChampion.id;enemy.lastPlayerHit=now;
+ const a=state.abilities;if(!a||!enemy||enemy.type==='tower')return;const id=state.selectedChampion.id;enemy.lastPlayerHit=now;
  if(enemy.mark==='Ezreal'){enemy.mark=null;damageEnemy(enemy,60,now,true,true);fx(enemy.group.position,1.1,0xffd76c);}
  if(enemy.mark==='Lucian')a.buffs.move=now+1.5;
  if(id==='Ashe'){a.focus=Math.min(4,a.focus+1);enemy.slowUntil=now+1.8;enemy.slowFactor=.65;}
@@ -218,7 +220,7 @@ export function updateAbilities(dt,now){
   if(tracking)p.dir.copy(tracking.group.position).setY(1).sub(p.mesh.position).normalize();
   const previous=p.mesh.position.clone(),step=Math.min(p.range-p.traveled,p.speed*dt);p.mesh.position.addScaledVector(p.dir,step);p.mesh.lookAt(p.mesh.position.clone().add(p.dir));p.traveled+=step;
   const segment=new THREE.Line3(previous,p.mesh.position);let stop=false;
-  const candidates=p.visualOnly?[]:livingEnemies().filter(e=>!p.hit.has(e)&&(!p.championOnly||e.type!=='minion')&&(!p.target||p.target===e)).map(e=>({e,center:e.group.position.clone().setY(1),distance:previous.distanceToSquared(e.group.position)})).sort((x,y)=>x.distance-y.distance);
+  const candidates=p.visualOnly?[]:livingEnemies().filter(e=>!p.hit.has(e)&&e.type!=='tower'&&(!p.championOnly||e.type!=='minion')&&(!p.target||p.target===e)).map(e=>({e,center:e.group.position.clone().setY(1),distance:previous.distanceToSquared(e.group.position)})).sort((x,y)=>x.distance-y.distance);
   for(const {e,center} of candidates){if(segment.closestPointToPoint(center,true,new THREE.Vector3()).distanceTo(center)>e.radius+p.radius)continue;p.hit.add(e);const effect={...p.effect};if(effect.jhinRoot&&now-e.lastPlayerHit<4)effect.root=1.3;if(p.visual==='R'&&state.selectedChampion.id==='Ashe')effect.root=Math.min(3.5,.5+p.traveled*.1);hit(e,p.damage*(e.type==='minion'?(effect.minionMultiplier||1):1),now,effect);if(effect.falloff&&p.hit.size===1)p.damage*=effect.falloff;if(!p.pierce||((p.effect.jhinRoot||p.effect.stopOnChampion)&&e.type!=='minion')){stop=true;break;}}
   if(stop||p.traveled>=p.range){remove(p.mesh);a.shots.splice(i,1);}
  }

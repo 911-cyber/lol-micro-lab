@@ -64,7 +64,7 @@ export function initializeGame() {
     DODGE: 'DODGE',
     CS: 'CS',
     COMBINED: 'COMBINED',
-    LANE: 'LANE'
+    LANE: 'LANE', DUEL:'DUEL'
   });
   state.mode = state.MODE.FREE;
   state.DIFFICULTIES = [{
