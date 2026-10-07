@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { championById } from './roster.js';
 
 const LESSONS = {
+  DUEL:'前に出てQを誘い、狙いが決まったら横へ回避。ミニオンと一緒にタワーへ。二本先取で勝利。',
   FREE:'地面を右クリックで移動、敵を右クリックで通常攻撃。まず1発撃ってから移動してみよう。',
   KITE:'攻撃の発射前に動くとキャンセル。弾が出た直後に移動し、次の攻撃まで距離を作ろう。',
   TARGET:'カーソルを次の敵へ先に移し、A→左クリック。Attack Moveは射程内でカーソルに近い敵を選ぶ。',
@@ -21,6 +22,8 @@ export function coachingAdvice(s = state) {
   if((s.mode==='KITE'||s.mode==='COMBINED')&&s.hits>=3&&s.cleanKites/s.hits<.5)return '攻撃は出せている。次は弾の発射直後に1回移動し、次の攻撃まで止まらない練習をしよう。';
   if(s.playerHp<40)return '残りHPが少ない。敵へ近づくより、回避と安全な距離を優先しよう。';
   if(s.mode==='SPACING'&&s.modeData.spacingDangerTime>2)return '赤い危険範囲に入る時間が増えている。自分の射程の外側寄りを使おう。';
+  if(s.micro?.windows.size)return '回避成功。相手が射程内なら、次の攻撃が来る前にAAを返そう。近づきすぎる追撃は不要。';
+  if(s.micro?.recoveryTime>3&&s.micro.movingRecovery/s.micro.recoveryTime<.4)return 'AAの待ち時間に立ち止まりがち。発射後は横か後ろへ動き、次のAAでまた射程に入ろう。';
   return modeLesson(s.mode)+' '+(s.selectedChampion?.tip||'');
 }
 
@@ -45,7 +48,7 @@ export function resultObservation(mode) {
 }
 export function updateCoach(dt) {
   if(!state.coachEnabled||state.resultPanel.classList.contains('show'))return;
-  state.coachClock-=dt;if(state.coachClock>0)return;state.coachClock=4;
+  state.coachClock-=dt;if(state.coachClock>0&&!state.micro?.windows.size)return;state.coachClock=4;
   document.querySelector('#coachMessage').textContent=coachingAdvice();
 }
 

@@ -9,6 +9,7 @@ import { championById } from './roster.js';
 import { enemyMovement, hurtPlayer } from './abilities.js';
 import { poseWindup, poseRelease, burst, playCue } from './presentation.js';
 
+import { noteEvade } from './micro.js';
 const SETTINGS = [
   { windup: .75, interval: 3, speed: 7.2, damage: 8, movement: 1.3 },
   { windup: .55, interval: 2.4, speed: 8.5, damage: 10, movement: 1.6 },
@@ -57,11 +58,13 @@ function prepareShot(now) {
   state.mainDummy.group.lookAt(state.player.position.x, 0, state.player.position.z);
   poseWindup(state.mainDummy.group,now,config.windup,'Q');
   // Lock the aim when the warning appears; moving sideways during windup can evade it.
+  state.mainDummy.microOpeningUntil=now+config.windup+.35;state.mainDummy.recoverUntil=0;
   state.laneData.warning = { mesh, origin, direction, releaseAt: now + config.windup, config };
   state.laneData.nextAttack = now + config.interval;
 }
 
 function releaseShot() {
+  state.mainDummy.recoverUntil=performance.now()/1000+.35;
   const warning = state.laneData.warning;
   removeMesh(warning.mesh);
   state.laneData.warning = null;
@@ -70,7 +73,7 @@ function releaseShot() {
   mesh.position.copy(warning.origin);
   mesh.lookAt(warning.origin.clone().add(warning.direction));
   state.scene.add(mesh);
-  state.laneData.shots.push({ mesh, direction: warning.direction, config: warning.config, traveled: 0 });
+  state.laneData.shots.push({ mesh, direction: warning.direction, config: warning.config, traveled: 0, near:Infinity,evadeNoted:false });
   state.laneMetrics.fired++;
 }
 
@@ -86,7 +89,9 @@ function updateShots(dt) {
     // Swept collision keeps hits consistent even on a slow frame.
     const segment = new THREE.Line3(previous, shot.mesh.position);
     const closest = segment.closestPointToPoint(player, true, new THREE.Vector3());
+    shot.near=Math.min(shot.near,closest.distanceTo(player));
     if (closest.distanceTo(player) < HIT_RADIUS) {
+      state.micro?.windows.delete(state.mainDummy);
       hurtPlayer(shot.config.damage,performance.now()/1000);
       burst(state.player.position.clone().setY(.3),'Ezreal');playCue('Ezreal','impact');
       state.laneMetrics.hit++;
@@ -94,6 +99,7 @@ function updateShots(dt) {
       state.score = Math.max(0, state.score - 50);
       toast('ハラス被弾 — 予告線の横へ移動', 'bad');
     } else if (shot.traveled < SHOT_RANGE) {
+      if(!shot.evadeNoted&&shot.near<2.5&&shot.mesh.position.clone().sub(player).dot(shot.direction)>1.5){shot.evadeNoted=true;noteEvade(state.mainDummy,performance.now()/1000);}
       continue;
     } else {
       state.laneMetrics.dodged++;
@@ -128,8 +134,8 @@ export function updateLane(dt, now) {
     const distance = edgeDistance(enemy);
     const direction = state.player.position.clone().sub(enemy.group.position).setY(0);
     if (direction.lengthSq()) direction.normalize();
-    if (distance > 6.2) enemy.group.position.addScaledVector(direction, config.movement * dt * enemyMovement(enemy,now));
-    if (distance < 4.2) enemy.group.position.addScaledVector(direction, -config.movement * dt * enemyMovement(enemy,now));
+    if (now>=enemy.recoverUntil && distance > 6.2) enemy.group.position.addScaledVector(direction, config.movement * dt * enemyMovement(enemy,now));
+    if (now>=enemy.recoverUntil && distance < 4.2) enemy.group.position.addScaledVector(direction, -config.movement * dt * enemyMovement(enemy,now));
     enemy.group.position.x = THREE.MathUtils.clamp(enemy.group.position.x, -2, 12);
     enemy.group.position.z = THREE.MathUtils.clamp(enemy.group.position.z, -6, 6);
     if (distance <= 7 && now >= data.nextAttack && enemyMovement(enemy,now)>0) prepareShot(now);

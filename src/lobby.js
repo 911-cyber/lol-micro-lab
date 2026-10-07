@@ -7,7 +7,9 @@ import { modeLesson, startCoach, bindCoach } from './coach.js';
 import { abilityKit, initializeAbilityHud, bindAbilityHud } from './abilities.js';
 import { unlockSound, bindSoundControl } from './presentation.js';
 
+import { bindDuel } from './duel.js';
 export const DRILLS = [
+  {id:'DUEL',key:'8',name:'ミッド1v1',tag:'FIRST TO TWO',icon:'⚔',detail:'エズリアルBOTと対戦。タワー破壊で二本先取、ラウンド間に装備を選択。',time:'二本先取'},
   {id:'KITE',key:'1',name:'カイティング',tag:'ATTACK + MOVE',icon:'↗',detail:'攻撃したら移動。追いつかれずにダメージを出す。',time:'30秒'},
   {id:'TARGET',key:'2',name:'ターゲット切替',tag:'TARGET SELECTION',icon:'⌖',detail:'複数の敵へ素早く正確に攻撃を切り替える。',time:'30秒'},
   {id:'SPACING',key:'3',name:'距離管理',tag:'SPACING',icon:'◎',detail:'自分の射程内、敵の危険範囲外を保つ。',time:'30秒'},
@@ -37,6 +39,7 @@ function renderSelection() {
 }
 
 export function openLobby() {
+  document.querySelector('#duelPanel').hidden=true;
   state.menuOpen=true;
   state.rightMouseHeld=false;state.middleDragging=false;state.spaceHeld=false;
   state.renderer.domElement.style.cursor='';
@@ -75,5 +78,5 @@ export function initializeLobby() {
   document.querySelector('#returnLobby').addEventListener('click',openLobby);
   document.querySelector('#resultMenu').addEventListener('click',openLobby);
   document.querySelector('#resultRetry').addEventListener('click',launchTraining);
-  buildArena('FREE');bindCoach();bindAbilityHud();bindSoundControl();openLobby();
+  bindDuel(launchTraining,openLobby);buildArena('FREE');bindCoach();bindAbilityHud();bindSoundControl();openLobby();
 }

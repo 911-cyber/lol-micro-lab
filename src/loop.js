@@ -12,11 +12,13 @@ import { updateCoach } from './coach.js';
 import { updateAbilities } from './abilities.js';
 import { updateOpponents } from './enemy-casters.js';
 import { updatePresentation } from './presentation.js';
+import { updateMicro } from './micro.js';
+import { updateDuel } from './duel.js';
 export function animate(ms) {
   const now = ms / 1000,
     dt = Math.min(.05, (ms - state.lastTime) / 1000 || 0);
   state.lastTime = ms;
-  if(state.menuOpen||state.resultPanel.classList.contains('show')) {state.renderer.render(state.scene,state.camera);requestAnimationFrame(animate);return;}
+  if(state.menuOpen||state.resultPanel.classList.contains('show')||(state.mode==='DUEL'&&state.duel?.phase!=='play')) {state.renderer.render(state.scene,state.camera);requestAnimationFrame(animate);return;}
   updateAbilities(dt,now);
   updateOrder(dt, now);
   updateProjectiles(dt, now);
@@ -27,7 +29,8 @@ export function animate(ms) {
   updateDodgeMode(dt);
   updateOpponents(dt,now);
   updateCsMode(dt, now);
-  updateLane(dt, now);
+  updateLane(dt, now);updateDuel(dt,now);
+  updateMicro(dt,now);
   updateModeTimer(dt);
   updateVisuals(dt);
   updateCameraMotion(dt);

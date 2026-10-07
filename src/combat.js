@@ -6,6 +6,7 @@ import { toast, flashTarget, showMarker } from './ui.js';
 import { championProjectile, disposeObject } from './champions.js';
 import { basicAttackDamage, onBasicHit, cancelChannel } from './abilities.js';
 import { poseWindup, poseRelease, cancelPose, burst, playCue } from './presentation.js';
+import { noteMicroAttack, noteMicroHit } from './micro.js';
 export function edgeDistance(e) {
   return Math.max(0, state.player.position.distanceTo(e.group.position) - state.PLAYER_RADIUS - e.radius);
 }
@@ -81,6 +82,7 @@ export function startAttack(e, now) {
   return true;
 }
 export function launchProjectile(e, now) {
+  noteMicroAttack(e);
   state.attackState = 'idle';
   state.attackTarget = null;
   state.lastShotAt = now;
@@ -93,6 +95,7 @@ export function launchProjectile(e, now) {
   state.projectiles.push({
     mesh,
     target: e,
+    launchedAt:now,
     damage: basicAttackDamage(now) * (state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0 ? 1.5 : 1)
   });
   if(state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0) {
@@ -111,10 +114,12 @@ export function killEnemy(e, now, fromPlayer = true) {
     if (e.type === 'minion') state.cs++;
   }
 }
-export function damageEnemy(e, amount, now, fromPlayer = true, fromSkill = false) {
+export function damageEnemy(e, amount, now, fromPlayer = true, fromSkill = false, launchedAt=-Infinity) {
   if (!e?.alive) return;
+  if(state.mode==='DUEL'&&state.duel){const d=state.duel;if(e.type==='tower'){if(fromSkill)return;const escorted=state.alliedMinions.some(m=>m.alive&&m.group.position.distanceTo(e.group.position)<7);if(!escorted)amount*=.15;}if(e===d.bot){amount*=.15*(1-Math.min(.6,d.botItems.filter(i=>i==='armor').length*.15));if(fromPlayer)d.aggressionUntil=d.time+3;}}
   e.hp = Math.max(0, e.hp - amount);
   if (fromPlayer) {
+    if(amount>0)noteMicroHit(e,now,launchedAt);
     if(!fromSkill)state.hits++;
     state.score += 60;
   }
@@ -138,7 +143,7 @@ export function updateProjectiles(dt, now) {
       state.scene.remove(p.mesh);
       if(state.selectedChampion)disposeObject(p.mesh);
       state.projectiles.splice(i, 1);
-      damageEnemy(e, p.damage ?? state.ATTACK_DAMAGE, now, true);
+      damageEnemy(e, p.damage ?? state.ATTACK_DAMAGE, now, true, false, p.launchedAt);
       burst(aim,state.selectedChampion?.id);playCue(state.selectedChampion?.id,'impact');
       onBasicHit(e,now,p.damage??state.ATTACK_DAMAGE);
     } else {
@@ -148,6 +153,7 @@ export function updateProjectiles(dt, now) {
   }
 }
 export function updateOrder(dt, now) {
+  if(state.playerHp<=0)return;
   if(state.abilities?.cast||state.abilities?.dash)return;
   if(state.abilities?.charge||state.abilities?.buffs.kaisaCharge>now){if(state.order.type==='move'||state.order.type==='attackMove')moveToward(state.order.point,dt);else if(state.order.type==='attack'&&state.order.target?.alive&&!enemyInAttackRange(state.order.target))moveTowardTarget(state.order.target,dt);return;}
   if(state.abilities?.channel&&state.abilities.channel.kind!=='lucian')return;

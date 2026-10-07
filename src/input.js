@@ -11,7 +11,7 @@ import { castSkill, releaseCharge } from './abilities.js';
 export function bindInput() {
   state.renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   state.renderer.domElement.addEventListener('pointerdown', e => {
-    if(state.menuOpen||state.resultPanel.classList.contains('show'))return;
+    if(state.menuOpen||state.resultPanel.classList.contains('show')||(state.mode==='DUEL'&&state.duel?.phase!=='play'))return;
     state.pointerPx.set(e.clientX, e.clientY);
     if (e.button === 2) {
       e.preventDefault();
@@ -38,7 +38,7 @@ export function bindInput() {
     }
   });
   state.renderer.domElement.addEventListener('pointermove', e => {
-    if(state.menuOpen||state.resultPanel.classList.contains('show'))return;
+    if(state.menuOpen||state.resultPanel.classList.contains('show')||(state.mode==='DUEL'&&state.duel?.phase!=='play'))return;
     state.pointerPx.set(e.clientX, e.clientY);
     state.pointerInside = true;
     if (state.rightMouseHeld && performance.now() - state.lastMoveIssueMs >= state.HOLD_MOVE_INTERVAL_MS) {
@@ -88,6 +88,7 @@ export function bindInput() {
     if(e.code==='Escape'){e.preventDefault();openLobby();return;}
     if(['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target?.tagName))return;
     if(e.code==='KeyM'){e.preventDefault();openLobby();return;}
+    if(state.mode==='DUEL'&&state.duel?.phase!=='play')return;
     if(state.menuOpen)return;
     if(!e.repeat&&['KeyQ','KeyW','KeyE','KeyR','KeyD','KeyF'].includes(e.code)){e.preventDefault();castSkill(e.code.slice(3));return;}
     if (e.code === 'Space') {
@@ -126,6 +127,7 @@ export function bindInput() {
       if (e.code === 'Digit5') setMode(state.MODE.CS);
       if (e.code === 'Digit6') setMode(state.MODE.COMBINED);
       if (e.code === 'Digit7') setMode(state.MODE.LANE);
+      if (e.code === 'Digit8') setMode('DUEL');
     }
   });
   window.addEventListener('keyup', e => {

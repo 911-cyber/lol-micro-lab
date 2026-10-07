@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { state } from './state.js';
+import { microSummary } from './micro.js';
 import { resultObservation } from './coach.js';
 import { updateMinimap } from './minimap.js';
 export function showMarker(point, color = 0x55e36f) {
@@ -127,13 +128,17 @@ export function showResult(finished) {
     diagnosis = hpRate < .4 ? '残りHPが少ない。予告線が出たら横移動を優先し、CSへ戻ろう。' : csRate < .6 ? '回避しながら赤HPバーを確認。倒せる瞬間にAAを1発だけ入れよう。' : 'CSと回避を両立できている。難易度を上げて同じ精度を維持しよう。';
   }
   recordResult(finished, performance);
-  const observed=document.querySelector('#resultObservation');observed.hidden=!state.coachEnabled;observed.textContent=resultObservation(finished);
+  const observed=document.querySelector('#resultObservation');observed.hidden=!state.coachEnabled;observed.textContent=resultObservation(finished)+(microSummary()?' '+microSummary()+'。':'');
   if(state.coachEnabled&&state.selectedChampion)diagnosis+=' 次の練習：'+state.selectedChampion.tip;
   state.resultGradeEl.textContent = gradeFor(performance);
   state.resultTitleEl.textContent = finished;
   state.resultScoreEl.textContent = `PERFORMANCE ${performance}/100 • SCORE ${Math.round(state.score)} • ${state.difficulty().name}`;
   state.resultStatsEl.innerHTML = stats.map(([a, b]) => statCard(a, b)).join('');
   if(state.abilities)state.resultStatsEl.innerHTML+=statCard('SKILL HIT',state.abilities.hits)+statCard('FLASH',state.abilities.flash)+statCard('HEAL',state.abilities.heal);
+  const micro=state.micro;
+  if(micro?.attacks)state.resultStatsEl.innerHTML+=statCard('射程の外側でAA',`${micro.edgeAttacks}/${micro.attacks}`);
+  if(micro?.recoveryTime>.2)state.resultStatsEl.innerHTML+=statCard('AA待ち時間の移動',`${Math.round(micro.movingRecovery/micro.recoveryTime*100)}%`);
+  if(micro?.evades)state.resultStatsEl.innerHTML+=statCard('回避後のAA反撃',`${micro.returns}/${micro.evades}`);
   state.resultDiagnosisEl.textContent = diagnosis + weakestHistoryText();
   state.resultPanel.classList.add('show');
   if(state.coachEnabled)document.querySelector('#coachMessage').textContent=diagnosis;

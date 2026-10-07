@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "mid lane starts with equal towers, six-versus-six minions and an Ezreal bot",
+    "entering skill range baits Q; its chosen direction stays fixed after windup",
+    "both champions respawn after five active seconds without ending the round",
+    "tower has backdoor protection, permits escorted AA and rejects spell damage",
+    "one tower gives one point, selection freezes play and both sides carry one item into a reset round",
+    "two tower wins end the match and prohibit additional equipment selection",
+    "a split score reaches round three with equal item counts",
+    "long sessions continue spawning waves and fighting without unbounded dead-unit buildup",
+    "all three difficulties engage with reaction and aim variation",
+    "a bot-led wave actually destroys the defending tower through normal combat",
+    "all ten selectable champions can enter and simulate the duel",
+    "leaving duel cleans match objects and restores ordinary CS training"
+  ]
+}

@@ -10,8 +10,11 @@ import { startCoach } from './coach.js';
 import { disposeObject } from './champions.js';
 import { resetAbilities, enemyMovement, hurtPlayer } from './abilities.js';
 import { resetOpponents, startOpponents } from './enemy-casters.js';
+import { resetMicro } from './micro.js';
 import { clearPresentation } from './presentation.js';
+import { startDuel, resetDuel } from './duel.js';
 export function resetStats() {
+  resetMicro();
   state.hits = 0;
   state.cancels = 0;
   state.cleanKites = 0;
@@ -41,6 +44,7 @@ export function cycleDifficulty() {
 export function setMode(next, opts = {}) {
   const keepStats = !!opts.keepStats,
     keepResult = !!opts.keepResult;
+  resetDuel();state.player.visible=true;
   state.mode = next;
   if(next!==state.MODE.FREE&&state.lobbyMode)state.lobbyMode=next;
   resetLane();
@@ -136,6 +140,7 @@ export function setMode(next, opts = {}) {
     spawnWave();
     startLane();
   }
+  if(next==='DUEL')startDuel();
   startOpponents(next);
   toast(`${state.mode} START — ${state.difficulty().name}`, 'info');
 }
@@ -242,7 +247,7 @@ export function updateDodgeMode(dt) {
   }
 }
 export function updateModeTimer(dt) {
-  if (state.mode === state.MODE.FREE) return;
+  if (state.mode === state.MODE.FREE||state.mode==='DUEL') return;
   state.modeData.time = Math.max(0, state.modeData.time - dt);
   const label = state.mode === state.MODE.LANE ? `LANE • CS ${state.cs} • MISS ${state.missedCs} • HIT ${state.laneMetrics.hit} • ${state.modeData.time.toFixed(1)}s` : state.mode === state.MODE.CS ? `CS ${state.cs} • MISS ${state.missedCs} • ${state.modeData.time.toFixed(1)}s` : `${state.mode} • ${state.modeData.time.toFixed(1)}s`;
   state.modeBanner.textContent = label;
