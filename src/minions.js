@@ -36,9 +36,9 @@ export function makeMinionHpBar(unit) {
 export function updateMinionHpBar(unit) {
   if (!unit.hpBar) return;
   const ratio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
-  const y = unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
+  const y = unit.type === 'champion' ? 2.65 : unit.minionClass === 'melee' || unit.maxHp === 320 ? 1.82 : 1.68;
   unit.hpBar.root.position.set(unit.group.position.x, y, unit.group.position.z);
-  unit.hpBar.root.visible = state.mode === state.MODE.CS && unit.alive && unit.group.visible;
+  unit.hpBar.root.visible = (state.mode === state.MODE.CS || state.mode === state.MODE.LANE) && unit.alive && unit.group.visible;
   unit.hpBar.fill.scale.x = 1.49 * ratio;
   unit.hpBar.fill.position.x = -.745 * (1 - ratio);
 }
@@ -181,7 +181,7 @@ export function updateLaneMinion(unit, opponents, dt, now) {
   }
 }
 export function updateCsMode(dt, now) {
-  if (state.mode !== state.MODE.CS) return;
+  if (state.mode !== state.MODE.CS && state.mode !== state.MODE.LANE) return;
   const enemyMinions = livingEnemies().filter(e => e.type === 'minion');
   const allies = livingAlliedMinions();
   if (!enemyMinions.length && state.modeData.time > 1) {

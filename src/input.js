@@ -114,6 +114,7 @@ export function bindInput() {
       if (e.code === 'Digit4') setMode(state.MODE.DODGE);
       if (e.code === 'Digit5') setMode(state.MODE.CS);
       if (e.code === 'Digit6') setMode(state.MODE.COMBINED);
+      if (e.code === 'Digit7') setMode(state.MODE.LANE);
       if (e.code === 'Escape') setMode(state.MODE.FREE);
     }
   });

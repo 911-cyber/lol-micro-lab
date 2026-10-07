@@ -2,7 +2,10 @@ const fs=require('fs'),path=require('path'),http=require('http'),assert=require(
 const {chromium}=require('playwright');
 const {PNG}=require('pngjs');
 const root=path.resolve(__dirname,'..');
-const original=require('child_process').execFileSync('git',['show','f475a6618df3beb2b96bf3bceeaa5900ee4799d9:main.js'],{cwd:root,encoding:'utf8'});
+// Align only the intentional 7-mode menu copy; baseline game logic stays unchanged.
+const original=require('child_process').execFileSync('git',['show','f475a6618df3beb2b96bf3bceeaa5900ee4799d9:main.js'],{cwd:root,encoding:'utf8'})
+ .replace('リザルトを確認。1〜6で次の練習を開始','リザルトを確認。1〜7で次の練習を開始')
+ .replace('1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO','1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO • 7 LANE');
 const scratch=fs.mkdtempSync(path.join(require('os').tmpdir(),'lol-micro-regression-'));
 console.log('Test artifacts:',scratch);
 const names=['player','renderer','scene','camera','cameraFocus','cameraSettings','order','modeData','enemies','alliedMinions','projectiles','minionProjectiles','skillshots','mode','difficultyIndex','attackState','windupEnd','nextAttackReady','hits','cancels','cleanKites','dodges','cs','missedCs','score','playerHp','targetSwitches','skillshotsFired','skillshotsHit','sessionDuration','cameraLocked','spaceHeld','rightMouseHeld','attackMoveArmed','markerLife','targetFlash'];

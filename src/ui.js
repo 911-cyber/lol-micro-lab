@@ -115,6 +115,15 @@ export function showResult(finished) {
     stats = [['CS', state.cs], ['MISS', state.missedCs], ['RATE', `${Math.round(rate * 100)}%`]];
     diagnosis = rate < .6 ? 'HPバーを見て「自分の1発で倒せる瞬間」まで待とう。早撃ちを減らすのが最優先。' : rate < .82 ? 'タイミングは掴めてきた。複数ミニオンのHPを同時に見る癖をつけよう。' : 'ラストヒット精度は良好。次は移動やハラスを混ぜたCSへ。';
   }
+  if (finished === state.MODE.LANE) {
+    const total = state.cs + state.missedCs;
+    const csRate = state.cs / Math.max(1, total);
+    const resolved = state.laneMetrics.hit + state.laneMetrics.dodged;
+    const dodgeRate = state.laneMetrics.dodged / Math.max(1, resolved);
+    performance = clamp100((csRate * 65 + hpRate * 20 + dodgeRate * 15) * Math.min(1, total / 6));
+    stats = [['CS', state.cs], ['MISS', state.missedCs], ['CS RATE', `${Math.round(csRate * 100)}%`], ['HARASS HIT', state.laneMetrics.hit], ['DODGED', state.laneMetrics.dodged], ['HP', `${Math.round(state.playerHp)}%`]];
+    diagnosis = hpRate < .4 ? 'CSに集中して被弾が増えている。予告線が出たら横移動を優先しよう。' : csRate < .6 ? '回避しながら赤HPバーを確認。倒せる瞬間にAAを1発だけ入れよう。' : 'CSと回避を両立できている。難易度を上げて同じ精度を維持しよう。';
+  }
   recordResult(finished, performance);
   state.resultGradeEl.textContent = gradeFor(performance);
   state.resultTitleEl.textContent = finished;

@@ -4,6 +4,7 @@ import { updateCameraMotion, updateCameraTransform } from './camera.js';
 import { updateOrder, updateProjectiles } from './combat.js';
 import { respawnEnemies } from './entities.js';
 import { updateCsMode } from './minions.js';
+import { updateLane } from './lane.js';
 import { updateKiteMode, updateTargetMode, updateSpacingMode, updateDodgeMode, updateModeTimer } from './drills.js';
 import { updateVisuals, updateHud } from './ui.js';
 export function animate(ms) {
@@ -18,6 +19,7 @@ export function animate(ms) {
   updateSpacingMode(dt, now);
   updateDodgeMode(dt);
   updateCsMode(dt, now);
+  updateLane(dt, now);
   updateModeTimer(dt);
   updateVisuals(dt);
   updateCameraMotion(dt);

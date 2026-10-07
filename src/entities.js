@@ -88,6 +88,11 @@ export function resetEntities() {
   state.alliedMinions.splice(0);
   state.minionProjectiles.splice(0).forEach(p => state.scene.remove(p.mesh));
   state.enemies.splice(1);
+  if (state.mainDummy.hpBar) {
+    state.scene.remove(state.mainDummy.hpBar.root);
+    state.mainDummy.hpBar.bg.material.dispose();
+    state.mainDummy.hpBar.fillMat.dispose();
+  }
   state.mainDummy.alive = true;
   state.mainDummy.group.visible = true;
   state.mainDummy.hp = state.mainDummy.maxHp = 700;
@@ -104,7 +109,7 @@ export function resetEntities() {
   state.rangeRing.visible = false;
 }
 export function respawnEnemies(now) {
-  if (state.mode === state.MODE.CS) return;
+  if (state.mode === state.MODE.CS || state.mode === state.MODE.LANE) return;
   for (const e of state.enemies) {
     if (e.alive || now < e.respawnAt) continue;
     e.alive = true;
