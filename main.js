@@ -18,6 +18,13 @@ const playerHpText = $('#playerHpText');
 const modeBanner = $('#modeBanner');
 const objectiveBanner = $('#objectiveBanner');
 const toastEl = $('#toast');
+const difficultyStateEl = $('#difficultyState');
+const resultPanel = $('#resultPanel');
+const resultGradeEl = $('#resultGrade');
+const resultTitleEl = $('#resultTitle');
+const resultScoreEl = $('#resultScore');
+const resultStatsEl = $('#resultStats');
+const resultDiagnosisEl = $('#resultDiagnosis');
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x08131b);
@@ -51,8 +58,16 @@ const PROJECTILE_SPEED = 18;
 const ATTACK_DAMAGE = 70;
 const PLAYER_RADIUS = 0.72;
 
-const MODE = Object.freeze({ FREE:'FREE', KITE:'KITE', TARGET:'TARGET', SPACING:'SPACING', DODGE:'DODGE', CS:'CS' });
+const MODE = Object.freeze({ FREE:'FREE', KITE:'KITE', TARGET:'TARGET', SPACING:'SPACING', DODGE:'DODGE', CS:'CS', COMBINED:'COMBINED' });
 let mode = MODE.FREE;
+
+const DIFFICULTIES = [
+  {name:'EASY', kiteSpeed:2.10, kiteDamage:6, targetMotion:.78, spacingSpeed:1.55, spacingDamage:4, dodgeSpeed:7.2, dodgeSpawn:.96, csDrain:.82},
+  {name:'NORMAL', kiteSpeed:2.45, kiteDamage:8, targetMotion:1.00, spacingSpeed:1.85, spacingDamage:6, dodgeSpeed:8.5, dodgeSpawn:.82, csDrain:1.00},
+  {name:'HARD', kiteSpeed:2.85, kiteDamage:10, targetMotion:1.28, spacingSpeed:2.18, spacingDamage:8, dodgeSpeed:10.2, dodgeSpawn:.66, csDrain:1.18},
+];
+let difficultyIndex = 1;
+const difficulty = () => DIFFICULTIES[difficultyIndex];
 
 const camera = new THREE.PerspectiveCamera(CAMERA_FOV, innerWidth/innerHeight, 0.1, 220);
 const raycaster = new THREE.Raycaster();
@@ -98,7 +113,7 @@ function createEnemy(name,x,z,color=0xd95762,maxHp=700,radius=.76,type='dummy'){
   const group = makeChampion(color,0x69232b); group.position.set(x,0,z); group.scale.setScalar(type==='minion'?.62:1.05); scene.add(group);
   const hitbox = new THREE.Mesh(new THREE.SphereGeometry(type==='minion'?.85:1.25,14,10), new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
   hitbox.position.y=.85; group.add(hitbox);
-  const e={name,group,hitbox,hp:maxHp,maxHp,radius,type,alive:true,respawnAt:0,velocity:new THREE.Vector3(),aiClock:Math.random()*4,lastHitIndicator:null};
+  const e={name,group,hitbox,hp:maxHp,maxHp,radius,type,alive:true,respawnAt:0,velocity:new THREE.Vector3(),aiClock:Math.random()*4,lastHitIndicator:null,hpBar:null};
   enemies.push(e); return e;
 }
 
@@ -134,6 +149,7 @@ let lastMoveIssueMs=-Infinity,lastTime=performance.now();
 let order={type:'idle',point:player.position.clone(),target:null};
 let attackMoveArmed=false,attackState='idle',attackTarget=null,windupEnd=0,nextAttackReady=0,lastShotAt=-Infinity,awaitingKiteMove=false;
 let playerHp=100,playerMaxHp=100,hits=0,cancels=0,cleanKites=0,dodges=0,cs=0,missedCs=0,score=0,toastUntil=0;
+let targetSwitches=0,skillshotsFired=0,skillshotsHit=0,sessionDuration=0,lastSelectedTarget=null;
 
 const modeData={time:0,nextSpawn:0,nextEnemyAttack:0,spacingGoodTime:0,spacingDangerTime:0,wave:0};
 
@@ -147,7 +163,7 @@ function livingEnemies(){return enemies.filter(e=>e.alive&&e.group.visible);}
 function pickEnemy(x,y){rayFromScreen(x,y);let best=null,bestDist=Infinity;for(const e of livingEnemies()){const hits=raycaster.intersectObject(e.group,true);if(hits.length&&hits[0].distance<bestDist){best=e;bestDist=hits[0].distance;}}return best;}
 function clampPoint(p){p.x=THREE.MathUtils.clamp(p.x,-42,42);p.z=THREE.MathUtils.clamp(p.z,-32,32);p.y=0;return p;}
 function showMarker(point,color=0x55e36f){markerMaterial.color.setHex(color);orderMarker.position.set(point.x,.065,point.z);orderMarker.scale.setScalar(.82);markerMaterial.opacity=.92;orderMarker.visible=true;markerLife=.34;}
-function flashTarget(e){if(!e)return;activeTarget=e;targetFlash=.24;targetRing.position.set(e.group.position.x,.055,e.group.position.z);targetRing.material.opacity=.95;targetRing.visible=true;}
+function flashTarget(e){if(!e)return;if(mode===MODE.TARGET&&lastSelectedTarget&&lastSelectedTarget!==e)targetSwitches++;if(mode===MODE.TARGET)lastSelectedTarget=e;activeTarget=e;targetFlash=.24;targetRing.position.set(e.group.position.x,.055,e.group.position.z);targetRing.material.opacity=.95;targetRing.visible=true;}
 function toast(text,kind=''){toastEl.textContent=text;toastEl.className=`show ${kind}`.trim();toastUntil=performance.now()/1000+1.0;}
 function edgeDistance(e){return Math.max(0,player.position.distanceTo(e.group.position)-PLAYER_RADIUS-e.radius);}
 function enemyInAttackRange(e){return e?.alive&&edgeDistance(e)<=ATTACK_RANGE+.001;}
@@ -169,7 +185,7 @@ function moveToward(point,dt,stopDistance=0){const delta=new THREE.Vector3().sub
 function moveTowardTarget(e,dt){const stop=ATTACK_RANGE+PLAYER_RADIUS+e.radius;const delta=new THREE.Vector3().subVectors(e.group.position,player.position);delta.y=0;const dist=delta.length();if(dist<=stop)return true;delta.normalize();const step=Math.min(dist-stop,MOVE_SPEED*dt);player.position.addScaledVector(delta,Math.max(0,step));facePoint(e.group.position);return dist-step<=stop+.01;}
 function startAttack(e,now){if(!e?.alive||now<nextAttackReady||attackState==='windup'||!enemyInAttackRange(e))return false;attackState='windup';attackTarget=e;windupEnd=now+WINDUP_TIME;nextAttackReady=now+ATTACK_INTERVAL;facePoint(e.group.position);return true;}
 function launchProjectile(e,now){attackState='idle';attackTarget=null;lastShotAt=now;awaitingKiteMove=true;const mesh=new THREE.Mesh(projectileGeom,projectileMat.clone());mesh.position.copy(player.position).add(new THREE.Vector3(0,1.05,0));scene.add(mesh);projectiles.push({mesh,target:e});}
-function killEnemy(e,now,fromPlayer=true){e.alive=false;e.group.visible=false;e.respawnAt=now+.8;if(fromPlayer){score+=e.type==='minion'?45:250;if(e.type==='minion')cs++;}}
+function killEnemy(e,now,fromPlayer=true){e.alive=false;e.group.visible=false;if(e.hpBar)e.hpBar.root.visible=false;e.respawnAt=now+.8;if(fromPlayer){score+=e.type==='minion'?45:250;if(e.type==='minion')cs++;}}
 function damageEnemy(e,amount,now,fromPlayer=true){if(!e?.alive)return;e.hp=Math.max(0,e.hp-amount);if(fromPlayer){hits++;score+=60;}if(e.hp<=0)killEnemy(e,now,fromPlayer);}
 function updateProjectiles(dt,now){for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i],e=p.target;if(!e?.alive){scene.remove(p.mesh);projectiles.splice(i,1);continue;}const aim=e.group.position.clone().add(new THREE.Vector3(0,.9,0));const delta=aim.sub(p.mesh.position),dist=delta.length(),step=PROJECTILE_SPEED*dt;if(dist<=step+.18){scene.remove(p.mesh);projectiles.splice(i,1);damageEnemy(e,ATTACK_DAMAGE,now,true);}else{p.mesh.position.addScaledVector(delta.normalize(),step);}}}
 
@@ -194,34 +210,56 @@ function updateOrder(dt,now){
 }
 
 function resetEntities(){
-  for(const e of enemies){if(e!==mainDummy){scene.remove(e.group);if(e.lastHitIndicator)scene.remove(e.lastHitIndicator);}}
+  for(const e of enemies){if(e!==mainDummy){scene.remove(e.group);if(e.lastHitIndicator)scene.remove(e.lastHitIndicator);if(e.hpBar)scene.remove(e.hpBar.root);}}
   enemies.splice(1);
-  mainDummy.alive=true;mainDummy.group.visible=true;mainDummy.hp=mainDummy.maxHp=700;mainDummy.type='dummy';mainDummy.name='TRAINING DUMMY';mainDummy.radius=.76;mainDummy.group.scale.setScalar(1.05);mainDummy.group.position.set(8,0,-2);mainDummy.velocity.set(0,0,0);mainDummy.lastHitIndicator=null;
+  mainDummy.alive=true;mainDummy.group.visible=true;mainDummy.hp=mainDummy.maxHp=700;mainDummy.type='dummy';mainDummy.name='TRAINING DUMMY';mainDummy.radius=.76;mainDummy.group.scale.setScalar(1.05);mainDummy.group.position.set(8,0,-2);mainDummy.velocity.set(0,0,0);mainDummy.lastHitIndicator=null;mainDummy.hpBar=null;
   activeTarget=mainDummy;dangerRing.visible=false;rangeRing.visible=false;
 }
-function resetStats(){hits=0;cancels=0;cleanKites=0;dodges=0;cs=0;missedCs=0;score=0;playerHp=100;modeData.time=0;modeData.nextSpawn=0;modeData.nextEnemyAttack=0;modeData.spacingGoodTime=0;modeData.spacingDangerTime=0;modeData.wave=0;}
-function setMode(next){
-  mode=next;resetEntities();resetStats();order={type:'idle',point:player.position.clone(),target:null};attackState='idle';attackTarget=null;projectiles.splice(0).forEach(p=>scene.remove(p.mesh));skillshots.splice(0).forEach(s=>scene.remove(s.mesh));player.position.set(-4,0,2);
-  if(mode===MODE.FREE){modeBanner.textContent='FREE MODE';objectiveBanner.textContent='1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS';}
-  if(mode===MODE.KITE){modeBanner.textContent='KITING — 30s';objectiveBanner.textContent='AAを出した直後に移動。追いつかれないように削る';mainDummy.group.position.set(8,0,-1);modeData.time=30;rangeRing.visible=true;}
-  if(mode===MODE.TARGET){modeBanner.textContent='TARGET SWITCH — 30s';objectiveBanner.textContent='A→クリックでカーソルに近い敵を素早く切り替える';mainDummy.group.position.set(6,0,-3);createEnemy('ORANGE DUMMY',10,2,enemyColors[1],420,.76);createEnemy('PURPLE DUMMY',5,5,enemyColors[2],420,.76);mainDummy.hp=mainDummy.maxHp=420;modeData.time=30;rangeRing.visible=true;}
-  if(mode===MODE.SPACING){modeBanner.textContent='SPACING — 30s';objectiveBanner.textContent='黄色い自分の射程内、赤い敵の危険範囲外を維持';mainDummy.group.position.set(5.7,0,-1);modeData.time=30;rangeRing.visible=true;dangerRing.visible=true;}
-  if(mode===MODE.DODGE){modeBanner.textContent='DODGE — 30s';objectiveBanner.textContent='青いスキルショットを避ける。被弾でHPとスコア減';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=30;modeData.nextSpawn=.45;}
-  if(mode===MODE.CS){modeBanner.textContent='CS / LAST HIT — 45s';objectiveBanner.textContent='HPが低いミニオンだけをラストヒット。白リングは補助';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=45;spawnWave();}
-  toast(`${mode} START`,'info');
+function resetStats(){hits=0;cancels=0;cleanKites=0;dodges=0;cs=0;missedCs=0;score=0;playerHp=100;targetSwitches=0;skillshotsFired=0;skillshotsHit=0;sessionDuration=0;lastSelectedTarget=null;modeData.time=0;modeData.nextSpawn=0;modeData.nextEnemyAttack=0;modeData.spacingGoodTime=0;modeData.spacingDangerTime=0;modeData.wave=0;}
+function hideResult(){resultPanel.classList.remove('show');}
+function clamp100(v){return Math.max(0,Math.min(100,Math.round(v)));}
+function gradeFor(v){return v>=92?'S':v>=80?'A':v>=68?'B':v>=55?'C':'D';}
+function resultHistory(){try{return JSON.parse(localStorage.getItem('lolMicroLabResults')||'[]');}catch{return[];}}
+function recordResult(modeName,performance){const rows=resultHistory();rows.push({mode:modeName,performance,time:Date.now(),difficulty:difficulty().name});try{localStorage.setItem('lolMicroLabResults',JSON.stringify(rows.slice(-40)));}catch{}}
+function weakestHistoryText(){const rows=resultHistory();const buckets={};for(const r of rows){(buckets[r.mode]??=[]).push(r.performance);}const entries=Object.entries(buckets).filter(([,v])=>v.length);if(entries.length<2)return'';entries.sort((a,b)=>a[1].reduce((x,y)=>x+y,0)/a[1].length-b[1].reduce((x,y)=>x+y,0)/b[1].length);const [name,vals]=entries[0];const avg=Math.round(vals.reduce((x,y)=>x+y,0)/vals.length);return` 過去の平均では ${name} (${avg}) が今の弱点。`;}
+function statCard(label,value){return`<div class="result-stat"><span>${label}</span><b>${value}</b></div>`;}
+function showResult(finished){
+  let performance=0,diagnosis='',stats=[];
+  const hpRate=playerHp/playerMaxHp;
+  if(finished===MODE.KITE){const clean=cleanKites/Math.max(1,hits),cancel=cancels/Math.max(1,hits+cancels);performance=clamp100(Math.min(1,hits/12)*35+clean*30+hpRate*25+(1-cancel)*10);stats=[['HITS',hits],['CLEAN',cleanKites],['HP',`${Math.round(playerHp)}%`]];diagnosis=cancel>.22?'AAキャンセルが多め。弾が出る瞬間を確認してから移動しよう。':clean<.55?'AA後に止まる時間が長い。発射直後の右クリックをもっと早く。':hpRate<.65?'火力は出ているけど近づかれすぎ。AA射程の外側を使おう。':'AA→移動のリズムはかなり安定。次は敵を見ながら同じ精度を維持。';}
+  if(finished===MODE.TARGET){const cancel=cancels/Math.max(1,hits+cancels);performance=clamp100(Math.min(1,targetSwitches/8)*45+Math.min(1,hits/14)*35+(1-cancel)*20);stats=[['SWITCHES',targetSwitches],['HITS',hits],['CANCELS',cancels]];diagnosis=targetSwitches<5?'同じ敵を殴り続けがち。A→クリックで次の標的へ視線とカーソルを先に移そう。':cancel>.2?'切り替えはできている。次はAAの発射前キャンセルを減らそう。':'ターゲット変更は良好。次は移動を混ぜながら同じ速さを維持。';}
+  if(finished===MODE.SPACING){const good=modeData.spacingGoodTime/Math.max(1,sessionDuration),danger=modeData.spacingDangerTime/Math.max(1,sessionDuration);performance=clamp100(good*105-danger*65+hpRate*20);stats=[['GOOD',`${modeData.spacingGoodTime.toFixed(1)}s`],['DANGER',`${modeData.spacingDangerTime.toFixed(1)}s`],['HP',`${Math.round(playerHp)}%`]];diagnosis=danger>.22?'敵の危険範囲に入りすぎ。攻撃より先に「相手の届く距離」を意識しよう。':good<.45?'安全すぎて自分の射程も活かせていない。黄色リングの内側ギリギリへ。':'距離管理は安定。次はAAを混ぜてもこの間合いを崩さない練習へ。';}
+  if(finished===MODE.DODGE){const total=dodges+skillshotsHit,rate=dodges/Math.max(1,total);performance=clamp100(rate*85+hpRate*15);stats=[['DODGED',dodges],['HIT',skillshotsHit],['RATE',`${Math.round(rate*100)}%`]];diagnosis=rate<.7?'被弾が多め。弾を見てから大きく逃げるより、細かい横移動を増やそう。':rate<.88?'回避は良い。次は移動先を毎回変えて予測されにくくしよう。':'かなり安定して避けられている。複合練習に進めるレベル。';}
+  if(finished===MODE.COMBINED){const total=dodges+skillshotsHit,dodgeRate=dodges/Math.max(1,total),clean=cleanKites/Math.max(1,hits),cancel=cancels/Math.max(1,hits+cancels);performance=clamp100(dodgeRate*35+clean*30+hpRate*25+(1-cancel)*10);stats=[['CLEAN',cleanKites],['DODGE',`${Math.round(dodgeRate*100)}%`],['HP',`${Math.round(playerHp)}%`]];diagnosis=dodgeRate<.72?'AAに集中するとスキルショットを見失っている。攻撃後に敵ではなく画面全体を見る時間を作ろう。':clean<.5?'回避はできているけどAA→移動のリズムが崩れ気味。発射直後だけ移動する意識を戻そう。':hpRate<.55?'操作はできているが敵との距離が近い。カイト方向を後ろだけでなく斜めにも散らそう。':'攻撃と回避の同時処理が安定。実戦に近い複合ミクロができている。';}
+  if(finished===MODE.CS){const total=cs+missedCs,rate=cs/Math.max(1,total);performance=clamp100(rate*90+Math.min(1,cs/12)*10);stats=[['CS',cs],['MISS',missedCs],['RATE',`${Math.round(rate*100)}%`]];diagnosis=rate<.6?'HPバーを見て「自分の1発で倒せる瞬間」まで待とう。早撃ちを減らすのが最優先。':rate<.82?'タイミングは掴めてきた。複数ミニオンのHPを同時に見る癖をつけよう。':'ラストヒット精度は良好。次は移動やハラスを混ぜたCSへ。';}
+  recordResult(finished,performance);
+  resultGradeEl.textContent=gradeFor(performance);resultTitleEl.textContent=finished;resultScoreEl.textContent=`PERFORMANCE ${performance}/100 • SCORE ${Math.round(score)} • ${difficulty().name}`;resultStatsEl.innerHTML=stats.map(([a,b])=>statCard(a,b)).join('');resultDiagnosisEl.textContent=diagnosis+weakestHistoryText();resultPanel.classList.add('show');
+}
+function cycleDifficulty(){difficultyIndex=(difficultyIndex+1)%DIFFICULTIES.length;difficultyStateEl.textContent=difficulty().name;toast(`DIFFICULTY — ${difficulty().name}`,'info');}
+function setMode(next,opts={}){
+  const keepStats=!!opts.keepStats,keepResult=!!opts.keepResult;
+  mode=next;resetEntities();if(!keepStats)resetStats();if(!keepResult)hideResult();order={type:'idle',point:player.position.clone(),target:null};attackState='idle';attackTarget=null;projectiles.splice(0).forEach(p=>scene.remove(p.mesh));skillshots.splice(0).forEach(s=>scene.remove(s.mesh));player.position.set(-4,0,2);
+  if(mode===MODE.FREE){modeBanner.textContent=opts.complete?`${opts.complete} COMPLETE`:'FREE MODE';objectiveBanner.textContent=opts.complete?'リザルトを確認。1〜6で次の練習を開始':'1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO';return;}
+  if(mode===MODE.KITE){modeBanner.textContent='KITING — 30s';objectiveBanner.textContent='AAを出した直後に移動。追いつかれないように削る';mainDummy.group.position.set(8,0,-1);modeData.time=30;sessionDuration=30;rangeRing.visible=true;}
+  if(mode===MODE.TARGET){modeBanner.textContent='TARGET SWITCH — 30s';objectiveBanner.textContent='A→クリックでカーソルに近い敵を素早く切り替える';mainDummy.group.position.set(6,0,-3);createEnemy('ORANGE DUMMY',10,2,enemyColors[1],420,.76);createEnemy('PURPLE DUMMY',5,5,enemyColors[2],420,.76);mainDummy.hp=mainDummy.maxHp=420;modeData.time=30;sessionDuration=30;rangeRing.visible=true;}
+  if(mode===MODE.SPACING){modeBanner.textContent='SPACING — 30s';objectiveBanner.textContent='黄色い自分の射程内、赤い敵の危険範囲外を維持';mainDummy.group.position.set(5.7,0,-1);modeData.time=30;sessionDuration=30;rangeRing.visible=true;dangerRing.visible=true;}
+  if(mode===MODE.DODGE){modeBanner.textContent='DODGE — 30s';objectiveBanner.textContent='青いスキルショットを避ける。被弾でHPとスコア減';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=30;sessionDuration=30;modeData.nextSpawn=.45;}
+  if(mode===MODE.CS){modeBanner.textContent='CS / LAST HIT — 45s';objectiveBanner.textContent='頭上HPバーを見てラストヒット。白リングは補助';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=45;sessionDuration=45;spawnWave();}
+  if(mode===MODE.COMBINED){modeBanner.textContent='KITE + DODGE — 40s';objectiveBanner.textContent='AA→移動を維持しながら青いスキルショットも避ける';mainDummy.group.position.set(8,0,-1);modeData.time=40;sessionDuration=40;modeData.nextSpawn=.65;rangeRing.visible=true;}
+  toast(`${mode} START — ${difficulty().name}`,'info');
 }
 
-function updateKiteMode(dt,now){if(mode!==MODE.KITE||!mainDummy.alive)return;const delta=new THREE.Vector3().subVectors(player.position,mainDummy.group.position);delta.y=0;const dist=delta.length();if(dist>1.55){delta.normalize();mainDummy.group.position.addScaledVector(delta,2.45*dt);}if(dist<1.95&&now>=modeData.nextEnemyAttack){modeData.nextEnemyAttack=now+1.0;playerHp=Math.max(0,playerHp-8);score=Math.max(0,score-40);toast('Too close — hit by dummy','bad');}}
+function updateKiteMode(dt,now){if((mode!==MODE.KITE&&mode!==MODE.COMBINED)||!mainDummy.alive)return;const delta=new THREE.Vector3().subVectors(player.position,mainDummy.group.position);delta.y=0;const dist=delta.length();if(dist>1.55){delta.normalize();mainDummy.group.position.addScaledVector(delta,difficulty().kiteSpeed*dt);}if(dist<1.95&&now>=modeData.nextEnemyAttack){modeData.nextEnemyAttack=now+1.0;playerHp=Math.max(0,playerHp-difficulty().kiteDamage);score=Math.max(0,score-40);toast('Too close — hit by dummy','bad');}}
 
-function updateTargetMode(dt){if(mode!==MODE.TARGET)return;for(const e of livingEnemies()){e.aiClock+=dt;const center=e===mainDummy?new THREE.Vector3(6,0,-3):e.name.startsWith('ORANGE')?new THREE.Vector3(10,0,2):new THREE.Vector3(5,0,5);e.group.position.x=center.x+Math.sin(e.aiClock*.9)*1.2;e.group.position.z=center.z+Math.cos(e.aiClock*.7)*1.0;}}
+function updateTargetMode(dt){if(mode!==MODE.TARGET)return;for(const e of livingEnemies()){e.aiClock+=dt;const center=e===mainDummy?new THREE.Vector3(6,0,-3):e.name.startsWith('ORANGE')?new THREE.Vector3(10,0,2):new THREE.Vector3(5,0,5);e.group.position.x=center.x+Math.sin(e.aiClock*.9*difficulty().targetMotion)*1.2;e.group.position.z=center.z+Math.cos(e.aiClock*.7*difficulty().targetMotion)*1.0;}}
 
 function updateSpacingMode(dt,now){
   if(mode!==MODE.SPACING||!mainDummy.alive)return;
   dangerRing.position.set(mainDummy.group.position.x,.052,mainDummy.group.position.z);
   const dist=edgeDistance(mainDummy);
   const dir=new THREE.Vector3().subVectors(player.position,mainDummy.group.position);dir.y=0;if(dir.lengthSq())dir.normalize();
-  if(dist>3.85)mainDummy.group.position.addScaledVector(dir,1.85*dt);
-  if(dist<3.9){modeData.spacingDangerTime+=dt;score=Math.max(0,score-8*dt);if(now>=modeData.nextEnemyAttack){modeData.nextEnemyAttack=now+.8;playerHp=Math.max(0,playerHp-6);}}
+  if(dist>3.85)mainDummy.group.position.addScaledVector(dir,difficulty().spacingSpeed*dt);
+  if(dist<3.9){modeData.spacingDangerTime+=dt;score=Math.max(0,score-8*dt);if(now>=modeData.nextEnemyAttack){modeData.nextEnemyAttack=now+.8;playerHp=Math.max(0,playerHp-difficulty().spacingDamage);}}
   if(dist>=4.1&&dist<=ATTACK_RANGE){modeData.spacingGoodTime+=dt;score+=12*dt;}
 }
 
@@ -231,20 +269,31 @@ function spawnSkillshot(){
   if(side===1)start.set(bounds.x,0.35,THREE.MathUtils.randFloat(-bounds.z,bounds.z));
   if(side===2)start.set(THREE.MathUtils.randFloat(-bounds.x,bounds.x),0.35,-bounds.z);
   if(side===3)start.set(THREE.MathUtils.randFloat(-bounds.x,bounds.x),0.35,bounds.z);
-  const aim=player.position.clone();aim.x+=THREE.MathUtils.randFloat(-.8,.8);aim.z+=THREE.MathUtils.randFloat(-.8,.8);const vel=aim.sub(start).setY(0).normalize().multiplyScalar(8.5);
-  const mesh=new THREE.Mesh(skillGeom,skillMat.clone());mesh.position.copy(start);scene.add(mesh);skillshots.push({mesh,vel,life:5,scored:false});
+  const aim=player.position.clone();aim.x+=THREE.MathUtils.randFloat(-.8,.8);aim.z+=THREE.MathUtils.randFloat(-.8,.8);const vel=aim.sub(start).setY(0).normalize().multiplyScalar(difficulty().dodgeSpeed);
+  const mesh=new THREE.Mesh(skillGeom,skillMat.clone());mesh.position.copy(start);scene.add(mesh);skillshots.push({mesh,vel,life:5,scored:false});skillshotsFired++;
 }
 function updateDodgeMode(dt){
-  if(mode!==MODE.DODGE)return;
-  modeData.nextSpawn-=dt;if(modeData.nextSpawn<=0){spawnSkillshot();modeData.nextSpawn=Math.max(.38,.82-modeData.time*.002);}
-  for(let i=skillshots.length-1;i>=0;i--){const s=skillshots[i];s.life-=dt;s.mesh.position.addScaledVector(s.vel,dt);const d=s.mesh.position.distanceTo(player.position.clone().setY(.35));if(d<.72){playerHp=Math.max(0,playerHp-14);score=Math.max(0,score-70);toast('Skillshot hit','bad');scene.remove(s.mesh);skillshots.splice(i,1);continue;}if(s.life<=0||Math.abs(s.mesh.position.x)>24||Math.abs(s.mesh.position.z)>18){dodges++;score+=35;scene.remove(s.mesh);skillshots.splice(i,1);}}
+  if(mode!==MODE.DODGE&&mode!==MODE.COMBINED)return;
+  modeData.nextSpawn-=dt;if(modeData.nextSpawn<=0){spawnSkillshot();modeData.nextSpawn=Math.max(.34,difficulty().dodgeSpawn-modeData.time*.002);}
+  for(let i=skillshots.length-1;i>=0;i--){const s=skillshots[i];s.life-=dt;s.mesh.position.addScaledVector(s.vel,dt);const d=s.mesh.position.distanceTo(player.position.clone().setY(.35));if(d<.72){skillshotsHit++;playerHp=Math.max(0,playerHp-14);score=Math.max(0,score-70);toast('Skillshot hit','bad');scene.remove(s.mesh);skillshots.splice(i,1);continue;}if(s.life<=0||Math.abs(s.mesh.position.x)>24||Math.abs(s.mesh.position.z)>18){dodges++;score+=35;scene.remove(s.mesh);skillshots.splice(i,1);}}
+}
+
+function makeMinionHpBar(e){
+  const root=new THREE.Group();
+  const bg=new THREE.Sprite(new THREE.SpriteMaterial({color:0x101820,transparent:true,opacity:.96,depthTest:false,depthWrite:false}));
+  const fillMat=new THREE.SpriteMaterial({color:0x54d66f,transparent:true,opacity:1,depthTest:false,depthWrite:false});
+  const fill=new THREE.Sprite(fillMat);
+  bg.scale.set(1.55,.18,1);fill.scale.set(1.42,.105,1);bg.renderOrder=30;fill.renderOrder=31;root.add(bg,fill);scene.add(root);e.hpBar={root,bg,fill,fillMat};updateMinionHpBar(e);
+}
+function updateMinionHpBar(e){
+  if(!e.hpBar)return;const ratio=Math.max(0,Math.min(1,e.hp/e.maxHp));const y=e.maxHp===320?1.82:1.68;e.hpBar.root.position.set(e.group.position.x,y,e.group.position.z);e.hpBar.root.visible=mode===MODE.CS&&e.alive&&e.group.visible;e.hpBar.fill.scale.x=1.42*ratio;e.hpBar.fill.position.x=-.71*(1-ratio);e.hpBar.fillMat.color.setHex(ratio>.55?0x53d66e:ratio>.28?0xe0b94f:0xd94b52);
 }
 
 function makeLastHitIndicator(e){const ring=new THREE.Mesh(new THREE.RingGeometry(.62,.73,36),new THREE.MeshBasicMaterial({color:0xf5f0d0,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.06;scene.add(ring);e.lastHitIndicator=ring;}
 function spawnWave(){
   modeData.wave++;
   const xs=[2.0,3.5,5.0,7.2,8.6,10.0];
-  for(let i=0;i<6;i++){const melee=i<3;const e=createEnemy(`${melee?'MELEE':'CASTER'} MINION`,xs[i],0,(melee?0xb45a52:0x9b6ec7),melee?320:220,melee?.48:.42,'minion');e.group.position.z=(i%2?1.2:-.9)+(i>=3?1.4:0);e.group.scale.setScalar(melee?.62:.55);e.hp=e.maxHp;makeLastHitIndicator(e);}
+  for(let i=0;i<6;i++){const melee=i<3;const e=createEnemy(`${melee?'MELEE':'CASTER'} MINION`,xs[i],0,(melee?0xb45a52:0x9b6ec7),melee?320:220,melee?.48:.42,'minion');e.group.position.z=(i%2?1.2:-.9)+(i>=3?1.4:0);e.group.scale.setScalar(melee?.62:.55);e.hp=e.maxHp;makeLastHitIndicator(e);makeMinionHpBar(e);}
 }
 function updateCsMode(dt,now){
   if(mode!==MODE.CS)return;
@@ -252,9 +301,9 @@ function updateCsMode(dt,now){
   if(!minions.length&&modeData.time>1){spawnWave();return;}
   for(const e of minions){
     // Simulated allied damage creates a last-hit timing window; not a full SR wave simulation yet.
-    const drain=(e.maxHp===320?20:17)*dt*(.75+Math.sin(now*1.7+e.group.position.x)*.18);
+    const drain=(e.maxHp===320?20:17)*difficulty().csDrain*dt*(.75+Math.sin(now*1.7+e.group.position.x)*.18);
     e.hp=Math.max(0,e.hp-drain);
-    if(e.lastHitIndicator){e.lastHitIndicator.position.set(e.group.position.x,.06,e.group.position.z);e.lastHitIndicator.visible=e.hp>0&&e.hp<=ATTACK_DAMAGE;}
+    if(e.lastHitIndicator){e.lastHitIndicator.position.set(e.group.position.x,.06,e.group.position.z);e.lastHitIndicator.visible=e.hp>0&&e.hp<=ATTACK_DAMAGE;}updateMinionHpBar(e);
     if(e.hp<=0&&e.alive){missedCs++;killEnemy(e,now,false);score=Math.max(0,score-18);}
   }
 }
@@ -264,7 +313,7 @@ function updateModeTimer(dt){
   modeData.time=Math.max(0,modeData.time-dt);
   const label=mode===MODE.CS?`CS ${cs} • MISS ${missedCs} • ${modeData.time.toFixed(1)}s`:`${mode} • ${modeData.time.toFixed(1)}s`;
   modeBanner.textContent=label;
-  if(modeData.time<=0){const finished=mode;const finalScore=Math.round(score);setMode(MODE.FREE);toast(`${finished} COMPLETE — SCORE ${finalScore}`,'good');}
+  if(modeData.time<=0){const finished=mode;showResult(finished);setMode(MODE.FREE,{keepStats:true,keepResult:true,complete:finished});toast(`${finished} COMPLETE`,'good');}
 }
 
 function respawnEnemies(now){
@@ -281,7 +330,7 @@ function updateVisuals(dt){
 function updateCameraMotion(dt){if(cameraLocked||spaceHeld){cameraFocus.copy(player.position);clampFocus();return;}if(!cameraSettings.edgeScroll||middleDragging||!pointerInside)return;let x=0,y=0;if(pointerPx.x<=EDGE_SCROLL_PX)x=-1;else if(pointerPx.x>=innerWidth-EDGE_SCROLL_PX)x=1;if(pointerPx.y<=EDGE_SCROLL_PX)y=1;else if(pointerPx.y>=innerHeight-EDGE_SCROLL_PX)y=-1;if(!x&&!y)return;const {forward,right}=cameraBasisOnGround();const v=new THREE.Vector3().addScaledVector(right,x).addScaledVector(forward,y);if(v.lengthSq())v.normalize();cameraFocus.addScaledVector(v,CAMERA_PAN_SPEED*cameraSettings.zoom*dt);clampFocus();}
 
 function updateHud(now){
-  modeStateEl.textContent=mode;
+  modeStateEl.textContent=mode;difficultyStateEl.textContent=difficulty().name;
   orderStateEl.textContent=attackState==='windup'?'WINDUP':order.type.toUpperCase();orderStateEl.className=attackState==='windup'?'attacking':order.type==='move'?'moving':'';
   hitsStateEl.textContent=hits;cancelStateEl.textContent=cancels;kiteStateEl.textContent=cleanKites;dodgeStateEl.textContent=dodges;csStateEl.textContent=cs;scoreStateEl.textContent=Math.round(score);
   playerHpFill.style.width=`${playerHp}%`;playerHpText.textContent=`${Math.round(playerHp)} / ${playerMaxHp}`;
@@ -307,7 +356,9 @@ window.addEventListener('keydown',e=>{
   if(e.code==='KeyY'&&!e.repeat){cameraLocked=!cameraLocked;if(cameraLocked)cameraFocus.copy(player.position);}
   if(e.code==='KeyS'&&!e.repeat){e.preventDefault();issueStop();}
   if(e.code==='KeyA'&&!e.repeat){e.preventDefault();attackMoveArmed=true;rangeRing.visible=true;toast('Attack Move armed','info');}
-  if(!e.repeat){if(e.code==='Digit1'||e.code==='KeyK')setMode(MODE.KITE);if(e.code==='Digit2')setMode(MODE.TARGET);if(e.code==='Digit3')setMode(MODE.SPACING);if(e.code==='Digit4')setMode(MODE.DODGE);if(e.code==='Digit5')setMode(MODE.CS);if(e.code==='Escape')setMode(MODE.FREE);}
+  if(e.code==='KeyD'&&!e.repeat){e.preventDefault();cycleDifficulty();}
+  if(e.code==='KeyR'&&!e.repeat&&mode!==MODE.FREE){e.preventDefault();setMode(mode);}
+  if(!e.repeat){if(e.code==='Digit1'||e.code==='KeyK')setMode(MODE.KITE);if(e.code==='Digit2')setMode(MODE.TARGET);if(e.code==='Digit3')setMode(MODE.SPACING);if(e.code==='Digit4')setMode(MODE.DODGE);if(e.code==='Digit5')setMode(MODE.CS);if(e.code==='Digit6')setMode(MODE.COMBINED);if(e.code==='Escape')setMode(MODE.FREE);}
 });
 window.addEventListener('keyup',e=>{if(e.code==='Space')spaceHeld=false;});
 
