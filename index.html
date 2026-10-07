@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LoL Micro Lab — Training Suite v0.8</title>
+  <title>LoL Micro Lab — Training Suite v0.9</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -11,8 +11,8 @@
   <div id="hud">
     <section class="panel intro">
       <div class="eyebrow">LOL MICRO LAB • TRAINING SUITE</div>
-      <h1>Training Suite v0.8</h1>
-      <p>Kiting / Target Switch / Spacing / Dodge / CS のコア練習。</p>
+      <h1>Training Suite v0.9</h1>
+      <p>HPバー・難易度・リザルト・弱点診断まで入ったコア練習。</p>
     </section>
 
     <section class="panel state">
@@ -20,6 +20,7 @@
       <div><span>ORDER</span><b id="orderState">IDLE</b></div>
       <div><span>AS</span><b>0.75</b></div>
       <div><span>RANGE</span><b>550</b></div>
+      <div><span>DIFFICULTY</span><b id="difficultyState">NORMAL</b></div>
     </section>
 
     <section class="panel modes">
@@ -28,6 +29,9 @@
       <div><kbd>3</kbd><span>Spacing</span></div>
       <div><kbd>4</kbd><span>Dodge</span></div>
       <div><kbd>5</kbd><span>CS / Last Hit</span></div>
+      <div><kbd>6</kbd><span>Kite + Dodge</span></div>
+      <div><kbd>D</kbd><span>Difficulty</span></div>
+      <div><kbd>R</kbd><span>Restart Mode</span></div>
       <div><kbd>Esc</kbd><span>Free Mode</span></div>
     </section>
 
@@ -61,8 +65,16 @@
     </section>
 
     <div id="modeBanner">FREE MODE</div>
-    <div id="objectiveBanner">1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS</div>
+    <div id="objectiveBanner">1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO</div>
     <div id="toast"></div>
+
+    <section id="resultPanel" class="result-panel">
+      <div class="result-kicker">SESSION RESULT</div>
+      <div class="result-head"><b id="resultGrade">A</b><div><h2 id="resultTitle">KITING</h2><p id="resultScore">SCORE 0</p></div></div>
+      <div id="resultStats" class="result-stats"></div>
+      <div class="diagnosis"><span>NEXT FOCUS</span><p id="resultDiagnosis">—</p></div>
+      <div class="result-foot">1〜6で次の練習 / Rで再挑戦 / Escで閉じる</div>
+    </section>
   </div>
 
   <script type="importmap">
