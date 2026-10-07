@@ -1,10 +1,6 @@
-# Champion casting and overhead health bars
+# Champion casting in Mid Duel
 
-全10体の40スキル枠について、停止する詠唱、移動できる発動、チャージ、ダッシュ、チャネリングを分けました。既存のダメージ／マナ／CDは練習値のままです。LoL本体との全数値・全フレーム一致を確認した版ではありません。
-
-## 今回の挙動
-
-25種類の通常詠唱は、詠唱が終わってから効果を出します。その間は歩行とAAを止めます。詠唱中の移動／AA入力は行動として残し、終了後に再開します。追加スキルの重ね入力は拒否し、マナとCDを二重に消費しません。ヒール／フラッシュは別扱いです。
+停止する詠唱、移動できる発動、チャージ、ダッシュ、チャネリングを区別します。詠唱終了前の移動／AAは終了後に再開。短い追加入力は0.4秒の予約枠に保存し、停止で解除します。遠い対象指定スキルは対象まで歩いてから発動します。
 
 |チャンピオン|Q|W|E|R|
 |---|---|---|---|---|
@@ -19,25 +15,7 @@
 |ヴァルス|チャージ中は移動可・AA不可、離すと短く停止して発射|移動可、Q強化|停止して範囲攻撃|停止して拘束弾|
 |カイ＝サ|移動／AAを止めず追尾弾|停止して発射|移動可・AA不可、終了後にAS強化|プラズマ付きチャンピオン付近へダッシュ、シールド|
 
-ヴァルスQは最大威力になっても直ちに自動発射せず、キーを離すか最大保持時間で発射します。ダッシュは即時テレポートから時間のある移動へ変更し、終了までAAを禁止。拘束中は移動スキルとフラッシュを使えません。
 
-対象指定スキルは、カーソル付近かつ射程内の対象が必要です。何もない場所への入力で遠くの敵を自動選択しません。ケイトリン／カイ＝サRはミニオンを指定できません。ジンRはミニオンにダメージを与えて貫通し、最初のチャンピオンで止まります。ケイトリンの罠／ネットで印が付いた相手へのヘッドショットはAA射程が2倍になります。
+マナとランク1の待ち時間はData Dragon 16.20.1。ダメージ・ヒット判定・詠唱時間はシミュレーションで、LoLクライアントと全数値・全フレームの一致は保証していません。細部のチャージ・進化・視界などはREADME.mdの制約を参照してください。
 
-HUDに詠唱の残り時間、停止／AA禁止、移動可能なチャージ／連射を表示。ジンRには狙える扇状範囲を表示します。敵チャンピオンと練習ダミーの赤いHPバーは全モードで頭上に表示し、移動・ダメージ・死亡・復活に追従します。ミニオンの青／赤バーは固定色を維持します。
-
-## 参照と精度
-
-Riot公式のPC版チャンピオン説明と、既存のData Dragon 16.20.1 ja_JPデータを参照。Wild Riftの仕様は使用していません。
-
-- [Ashe](https://www.leagueoflegends.com/en-us/champions/ashe/) / [Caitlyn](https://www.leagueoflegends.com/en-us/champions/caitlyn/) / [Jinx](https://www.leagueoflegends.com/en-us/champions/jinx/) / [Jhin](https://www.leagueoflegends.com/en-us/champions/jhin/)
-- [Ezreal](https://www.leagueoflegends.com/en-us/champions/ezreal/) / [Lucian](https://www.leagueoflegends.com/en-us/champions/lucian/) / [Vayne](https://www.leagueoflegends.com/en-us/champions/vayne/)
-- [Miss Fortune](https://www.leagueoflegends.com/en-us/champions/miss-fortune/) / [Varus](https://www.leagueoflegends.com/en-us/champions/varus/) / [Kai'Sa](https://www.leagueoflegends.com/en-us/champions/kai-sa/)
-- [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon)
-
-公式の文章とData Dragonには、すべての移動制限・キャンセル条件・フレーム単位の詠唱時間は掲載されていません。cast-rules.jsの0.15〜1.00秒などは挙動を実装するための近似値で、実際のクライアントで全40枠の時間計測はしていません。ダッシュ速度、ノックバック、弾速、当たり判定、全パッシブ、スキルのチャージ数・進化・視界や装備を含む完全再現も未完了です。今回の改善は実際に止まる／動ける操作状態を作り、主要な対象・AA・貫通ルールを直すものです。
-
-## 確認
-
-CASTING-TEST-RESULTS.json：25種類の停止詠唱、全10体の発動状態、詠唱後の移動再開、AA禁止／リセット、例外、対象と射程、罠、貫通、全8モードのHPバー、メニュー／再開始を実際のゲームループで検証。描画器だけを代替し、Three.jsのシーングラフと計算は実物を使用します。
-
-既存の40スキル枠、9対面パターン、70キャラ／モード組み合わせ、CS6対6、カイト、操作、結果と演出の確認も実施。ブラウザでは詠唱表示と頭上HPバーを確認します。
+現在の確認はtests/controls.test.cjsとtests/duel.test.cjs。過去のモード別テストは現在の確認結果として掲載していません。

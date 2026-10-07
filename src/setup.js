@@ -41,7 +41,7 @@ export function initializeGame() {
   state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   state.renderer.outputColorSpace = THREE.SRGBColorSpace;
   state.game.appendChild(state.renderer.domElement);
-  state.CAMERA_FOV = 35;
+  state.CAMERA_FOV = 40;
   state.CAMERA_PITCH_DEG = 56;
   state.CAMERA_DISTANCE = 30;
   state.CAMERA_PAN_SPEED = 18;
@@ -56,48 +56,9 @@ export function initializeGame() {
   state.PROJECTILE_SPEED = 18;
   state.ATTACK_DAMAGE = 70;
   state.PLAYER_RADIUS = 0.72;
-  state.MODE = Object.freeze({
-    FREE: 'FREE',
-    KITE: 'KITE',
-    TARGET: 'TARGET',
-    SPACING: 'SPACING',
-    DODGE: 'DODGE',
-    CS: 'CS',
-    COMBINED: 'COMBINED',
-    LANE: 'LANE', DUEL:'DUEL'
-  });
-  state.mode = state.MODE.FREE;
-  state.DIFFICULTIES = [{
-    name: 'EASY',
-    kiteSpeed: 1.30,
-    kiteDamage: 6,
-    targetMotion: .78,
-    spacingSpeed: 1.55,
-    spacingDamage: 4,
-    dodgeSpeed: 7.2,
-    dodgeSpawn: .96,
-    csDrain: .82
-  }, {
-    name: 'NORMAL',
-    kiteSpeed: 1.65,
-    kiteDamage: 8,
-    targetMotion: 1.00,
-    spacingSpeed: 1.85,
-    spacingDamage: 6,
-    dodgeSpeed: 8.5,
-    dodgeSpawn: .82,
-    csDrain: 1.00
-  }, {
-    name: 'HARD',
-    kiteSpeed: 2.05,
-    kiteDamage: 10,
-    targetMotion: 1.28,
-    spacingSpeed: 2.18,
-    spacingDamage: 8,
-    dodgeSpeed: 10.2,
-    dodgeSpawn: .66,
-    csDrain: 1.18
-  }];
+  state.MODE=Object.freeze({DUEL:'DUEL'});
+  state.mode = state.MODE.DUEL;
+  state.DIFFICULTIES=[{name:'EASY'},{name:'NORMAL'},{name:'HARD'}];
   state.difficultyIndex = 1;
   state.difficulty = () => state.DIFFICULTIES[state.difficultyIndex];
   state.camera = new THREE.PerspectiveCamera(state.CAMERA_FOV, innerWidth / innerHeight, 0.1, 220);

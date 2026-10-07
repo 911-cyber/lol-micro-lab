@@ -1,40 +1,58 @@
-最新版：[ミッド1v1・二本先取と装備選択](MID-DUEL.md)
+# LoL Micro Lab — Mid Duel
 
-最新版：既存モードのミクロ分析と対面の発射後の隙を改善。[変更内容](MICRO-TRAINING.md)
+ブラウザーで遊ぶミッド1v1専用ゲーム。10体から自分のチャンピオンを選び、エズリアルBOTと対戦します。タワー破壊で一本、二本先取で勝利。ラウンド間に双方が装備を一つ選び、持ち越します。ほかのトレーニングモードは削除しました。
 
-# LoL Micro Lab
+## 遊ぶ
 
-LoLが上手くなるための3Dミクロトレーナー。
+既存の「LoL Micro Lab (Edge)」ショートカットから起動。チャンピオンと難易度を選び「ミッド1v1を開始」。操作設定はロビーまたはEscから開けます。
 
-最新の操作改善：[全10体の詠唱・移動・AAと頭上HPバー](CASTING-RULES.md)。停止するスキルと移動できる例外を分け、主要な対象／貫通ルールを修正しました。厳密なLoL本体との時間・数値一致は未検証です。
+| 入力 | 操作 |
+| --- | --- |
+| 右クリック／長押し | 地面へ移動／敵へ通常攻撃 |
+| A → 左クリック | 射程を表示してAttack Move |
+| Shift＋右クリック／X | Attack Moveを即入力 |
+| S／H | 停止・予約スキル解除 |
+| QWER | チャンピオンのスキル |
+| Shift＋QWER | 狙いを表示、キーを離して発射 |
+| D／F | ヒール／フラッシュ |
+| C長押し | AA射程 |
+| ` 長押し | 直接クリックをチャンピオンだけに制限 |
+| Space長押し／Y | 自分を中央に／カメラ固定切替 |
+| 画面端／矢印／中ドラッグ | カメラ移動 |
+| ミニマップ左／右クリック | カメラ移動／移動命令 |
+| Esc | 狙い解除、または設定と一時停止 |
+| T／M | 新しい対戦／チャンピオン選択 |
 
-最新の演出改善：[アッシュ／エズリアルの攻撃と対面の動き](CHAMPION-POLISH.md)。攻撃の構え・発射・命中、効果音ON/OFF、対面の距離調整と構え中の停止を追加しました。
+設定にはクイックキャスト、キーを離して発射、通常キャスト、Attack Moveの優先位置、カメラ固定、画面端移動と速度があります。ブラウザーごとに自動保存。
 
-現在の実装は[Skills Training](SKILLS-TRAINING.md)を参照してください。10体のチャンピオン、QWER、ヒール／フラッシュ、対面スキル回避、専用の練習空間とプレイ分析コーチを実装しています。操作はQWERスキル、Dヒール、Fフラッシュ、H難易度、T再開始です。
+## 対戦
 
-以下は初期カメラ実装時の記録です。
+- 近接3体・遠隔3体のウェーブが双方から継続出現。ミニオンへのラストヒット、チャンピオンを攻撃した際のミニオン・タワー反撃を実装。
+- BOTはCS、距離維持、可視の弾への反応、Q／W／E／R、マナ、AAの発射前停止を持ちます。反応は難易度別で、カーソルや将来の入力を読みません。
+- 死亡は5秒で復活。単独のタワー攻撃は軽減、ミニオンを伴うAAでタワーを壊します。
+- ラウンド結果にはCS、取り逃し、被弾、AAキャンセルに応じたコーチングを表示。会話型AIはこのUIには出していません。
 
-## 現在地: Camera v0.3
-今はゲーム機能を増やす前に、LoLのPoint & Clickカメラ感を合わせています。
+## 実装と確認
 
-### 実装済み
-- Free / unlocked camera
-- 画面端 Edge Scroll
-- MMBドラッグでカメラ移動
-- Space長押しで自キャラへセンター
-- YでCamera Lock / Unlock
-- Mouse Wheel Zoom
-- 右クリック移動
-- FOV / Pitch / Distance / Pan Speed / Edge Size をゲーム内で調整
+ES modules。`src/input.js`／`controls.js`／`aim.js`が操作、`camera.js`／`minimap.js`が視点、`player.js`が移動とタワー経路、`combat.js`／`abilities.js`が攻撃とスキル、`duel.js`が対戦とBOT、`duel-overlay.js`／`ui.js`がHUD、`champions.js`／`presentation.js`が描画と演出。
 
-### 次にやること
-1. カメラ角度・距離・速度を実際の使用感に合わせる
-2. 右クリック移動をLoL寄りにする
-3. Attack Move / AA timing
-4. Kiting
-5. Spacing
-6. Dodge
-7. Last Hit
-8. Combined training
+Three.js 0.180.0と実際の座標・衝突判定を使う統合テスト：
 
-開発中はWeb版で試し、完成時にはWindows向けダウンロード版も作る方針です。
+```
+node --experimental-vm-modules tests/controls.test.cjs /path/to/three.module.js
+node --experimental-vm-modules tests/duel.test.cjs /path/to/three.module.js
+```
+
+確認記録は `CONTROLS-TEST-RESULTS.json` と `DUEL-TEST-RESULTS.json`。WebGL描画とブラウザー上の操作は別途実画面で確認。
+
+## LoLとの違い
+
+このゲームはLoLクライアントの完全再現ではありません。全QWERを最初から使える専用対戦ルールです。HPは100へ正規化し、ダメージ、アイテム、ウェーブ間隔、各スキルの細部を簡略化しています。レベル上げ、ルーン、リコール、フルショップ、視界の霧、スキルの進化・全チャージ仕様は未実装。詠唱時間はシミュレーション推定値です。
+
+基礎マナ・自然回復・ランク1のマナ消費と待ち時間は取得済みのRiot Data Dragon 16.20.1から静的データ化。チャージの回復時間などクライアント専用情報までこのデータだけで保証できません。
+
+カメラは俯角56度、水平旋回−45度、垂直画角40度の透視投影。45度はこの実装でレーンを斜めに映すための旋回角で、LoL公式の俯角を意味しません。Riotの公開資料に確定的なカメラ角度の数値は見つからなかったため、公式の描画例を参考に操作しやすい配置を選択しました。
+
+参照： [Riotの描画パイプライン](https://www.riotgames.com/en/news/trip-down-lol-graphics-pipeline)、[Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon)、[公式キー設定ガイド](https://support.riotgames.com/en-us/league-of-legends/performance/hotkeys-keybindings-faq)。
+
+非公式ファン制作。Riot Games非公認。

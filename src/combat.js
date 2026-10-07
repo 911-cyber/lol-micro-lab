@@ -4,7 +4,7 @@ import { clampPoint, facePoint, moveToward, moveTowardTarget } from './player.js
 import { livingEnemies } from './entities.js';
 import { toast, flashTarget, showMarker } from './ui.js';
 import { championProjectile, disposeObject } from './champions.js';
-import { basicAttackDamage, onBasicHit, cancelChannel } from './abilities.js';
+import { basicAttackDamage, onBasicHit, cancelChannel, castSkill } from './abilities.js';
 import { poseWindup, poseRelease, cancelPose, burst, playCue } from './presentation.js';
 import { noteMicroAttack, noteMicroHit } from './micro.js';
 export function edgeDistance(e) {
@@ -36,6 +36,7 @@ export function notePostShotMove() {
 export function issueAttack(target) {
   if (!target?.alive) return;
   cancelChannel('attack');
+  if(state.attackState==='windup'&&state.attackTarget!==target)cancelWindup('target');
   state.order = {
     type: 'attack',
     point: target.group.position.clone(),
@@ -48,7 +49,7 @@ export function nearestEnemyToPoint(point, rangeOnly = true) {
     bestD = Infinity;
   for (const e of livingEnemies()) {
     if (rangeOnly && !enemyInAttackRange(e)) continue;
-    const d = e.group.position.distanceToSquared(point);
+    const d = e.group.position.distanceToSquared(state.controls?.attackMoveCursor===false?state.player.position:point);
     if (d < bestD) {
       bestD = d;
       best = e;
@@ -168,6 +169,7 @@ export function updateOrder(dt, now) {
     if (now >= state.windupEnd) launchProjectile(state.attackTarget, now);
     return;
   }
+  if(state.order.type==='castMove'){const order=state.order,e=order.target;if(!e?.alive){state.order.type='idle';return;}const ranges={'Jhin.Q':5.5,'Lucian.Q':5,'Vayne.E':5.5,'MissFortune.Q':6.5,'Caitlyn.R':35,'Kaisa.R':20},range=ranges[state.selectedChampion.id+'.'+order.key];if(state.player.position.distanceTo(e.group.position)<=range+e.radius){state.order.type='idle';castSkill(order.key,e.group.position.clone(),now);}else moveToward(e.group.position,dt,range+e.radius);return;}
   if (state.order.type === 'idle') return;
   if (state.order.type === 'move') {
     if (moveToward(state.order.point, dt)) state.order.type = 'idle';

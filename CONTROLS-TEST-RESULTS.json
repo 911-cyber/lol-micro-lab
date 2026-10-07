@@ -1,0 +1,27 @@
+{
+  "checks": [
+    "RMB ground movement and S/H stop preserve position",
+    "enemy RMB starts AA; repeated clicks on the same target do not cancel windup",
+    "A-confirm, Shift-RMB and X support attack move",
+    "cursor/player attack-move priority and champion-only RMB target filtering",
+    "normal cast shows an aim indicator and reserves mana/CD only on confirmation",
+    "indicator cast fires on key release",
+    "Shift shows indicators; RMB/Escape cancels without resource cost",
+    "short input buffer executes the next spell after a stationary cast",
+    "Stop clears the queued spell",
+    "official base mana/rank-one costs, 400-unit Flash and summoner cooldowns",
+    "zero-CD toggles do not inherit the summoner cooldown",
+    "diagonal camera, arrow pan, Space hold and Y toggle",
+    "diagonal minimap inverse mapping supports camera and movement",
+    "Escape pauses play; controls save to local storage",
+    "window blur releases held inputs and aim state",
+    "movement paths around tower bases instead of passing through",
+    "stun blocks BOT attacks/spells; root stops movement while allowing spells",
+    "BOT Q/W/E/R obey cast stops, mana and independent cooldowns",
+    "enemy minions retaliate after champion aggression",
+    "a round won while dead restores the player model for the next round",
+    "out-of-range targeted spells walk into range before consuming resources",
+    "pause preserves spell cooldowns and cast progress on resume",
+    "all 40 champion slots resolve with targeted, charged, passive and channel rules"
+  ]
+}
