@@ -3,43 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LoL Micro Lab — Camera v0.3</title>
+  <title>LoL Micro Lab — Camera v1.0</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="game"></div>
   <div id="hud">
     <section class="panel intro">
-      <div class="eyebrow">LOL MICRO LAB • CAMERA PASS</div>
-      <h1>Camera v0.3</h1>
-      <p>まずはLoLのPoint & Clickカメラ感だけを合わせる版。</p>
+      <div class="eyebrow">LOL MICRO LAB • CAMERA COMPLETE</div>
+      <h1>Camera v1.0</h1>
+      <p>LoLのPoint & Click操作を基準にした固定カメラ仕様。</p>
     </section>
 
     <section class="panel state">
       <div><span>CAMERA</span><b id="cameraState">UNLOCKED</b></div>
-      <div><span>ZOOM</span><b id="zoomState">100%</b></div>
-      <div><span>EDGE</span><b id="edgeState">ON</b></div>
+      <div><span>ZOOM</span><b id="zoomState">MAX</b></div>
     </section>
 
     <section class="panel controls">
       <div><kbd>Right Click</kbd><span>移動</span></div>
       <div><kbd>画面端</kbd><span>カメラ移動</span></div>
-      <div><kbd>MMB Drag</kbd><span>カメラを掴んで移動</span></div>
-      <div><kbd>Space</kbd><span>押している間、自分へセンター</span></div>
-      <div><kbd>Y</kbd><span>カメラ Lock / Unlock</span></div>
-      <div><kbd>Wheel</kbd><span>Zoom</span></div>
-    </section>
-
-    <section class="panel tuning" id="tuning">
-      <div class="tuning-title">Camera Tuning <button id="togglePanel">−</button></div>
-      <div class="tuning-body" id="tuningBody">
-        <label>FOV <output id="fovOut">46</output><input id="fov" type="range" min="38" max="58" step="1" value="46"></label>
-        <label>Pitch <output id="pitchOut">55°</output><input id="pitch" type="range" min="48" max="68" step="1" value="55"></label>
-        <label>Distance <output id="distanceOut">22.0</output><input id="distance" type="range" min="17" max="30" step="0.5" value="22"></label>
-        <label>Pan speed <output id="panOut">14</output><input id="pan" type="range" min="6" max="26" step="1" value="14"></label>
-        <label>Edge size <output id="edgeOut">18px</output><input id="edge" type="range" min="4" max="40" step="2" value="18"></label>
-        <div class="buttons"><button id="edgeToggle">Edge Scroll: ON</button><button id="resetCamera">Reset</button></div>
-      </div>
+      <div><kbd>MMB Drag</kbd><span>マップを掴んで移動</span></div>
+      <div><kbd>Space</kbd><span>押している間、自分を追従</span></div>
+      <div><kbd>Y</kbd><span>Camera Lock / Unlock</span></div>
+      <div><kbd>Wheel</kbd><span>Zoom In / Out</span></div>
     </section>
 
     <div id="centerHint">SPACE — CENTER ON CHAMPION</div>
