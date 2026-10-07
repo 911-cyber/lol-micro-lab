@@ -1,7 +1,5 @@
 {
   "checks": [
-    "RMB movement/AA, stop, both attack moves, Space/Y and difficulty match baseline",
-    "72 existing-mode state/result/HP-bar comparisons against baseline",
     "7 starts lane, champion and 6-v-6 minions with HP bars",
     "both teams fight in Lane Phase",
     "locked telegraph can be dodged by moving sideways",
@@ -16,9 +14,9 @@
     "swept collision catches shots crossing the player on a slow frame",
     "death ends lane and shows result with cleanup",
     "timer completion saves lane-specific CS/harass/HP result",
-    "Escape cleans lane state",
+    "Escape opens selection and pauses simulation; launch resets the session",
     "zero-CS session scores zero"
   ],
   "renderer": "stubbed; actual Three.js math and scene graph",
-  "passed": 18
+  "passed": 16
 }

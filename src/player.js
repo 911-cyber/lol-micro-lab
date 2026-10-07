@@ -4,8 +4,8 @@ import { screenToGround } from './camera.js';
 import { cancelWindup, notePostShotMove } from './combat.js';
 import { showMarker } from './ui.js';
 export function clampPoint(p) {
-  p.x = THREE.MathUtils.clamp(p.x, -42, 42);
-  p.z = THREE.MathUtils.clamp(p.z, -32, 32);
+  p.x = THREE.MathUtils.clamp(p.x, state.arenaBounds?.minX ?? -42, state.arenaBounds?.maxX ?? 42);
+  p.z = THREE.MathUtils.clamp(p.z, state.arenaBounds?.minZ ?? -32, state.arenaBounds?.maxZ ?? 32);
   p.y = 0;
   return p;
 }
@@ -44,6 +44,7 @@ export function moveToward(point, dt, stopDistance = 0) {
   delta.normalize();
   const step = Math.min(Math.max(0, dist - stopDistance), state.MOVE_SPEED * dt);
   state.player.position.addScaledVector(delta, step);
+  clampPoint(state.player.position);
   facePoint(state.player.position.clone().add(delta));
   return dist - step <= stopDistance + .025;
 }
@@ -56,6 +57,7 @@ export function moveTowardTarget(e, dt) {
   delta.normalize();
   const step = Math.min(dist - stop, state.MOVE_SPEED * dt);
   state.player.position.addScaledVector(delta, Math.max(0, step));
+  clampPoint(state.player.position);
   facePoint(e.group.position);
   return dist - step <= stop + .01;
 }

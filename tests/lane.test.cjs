@@ -12,6 +12,8 @@ class Element {
   addEventListener(type, f) { (this.handlers[type] ??= []).push(f); }
   dispatchEvent(e) { e.preventDefault ??= () => {}; for (const f of this.handlers[e.type] || []) f(e); }
   appendChild() {}
+  setAttribute() {}
+  focus() {}
   getBoundingClientRect() { return { left: 0, top: 0, width: 1280, height: 800 }; }
   get classList() { return { add: v => this.className = v, remove: () => this.className = '', contains: v => this.className === v }; }
 }
@@ -23,7 +25,8 @@ async function game(THREE, baseline) {
   math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   const store = new Map();
   const context = vm.createContext({ console, Math: math, innerWidth: 1280, innerHeight: 800, devicePixelRatio: 1,
-    window: win, document: { querySelector: s => { if (!dom.has(s)) dom.set(s, new Element()); return dom.get(s); } },
+    URL,AbortController,fetch:async()=>({ok:true,json:async()=>({connected:false})}),
+    window: win, document: { querySelectorAll:()=>[],querySelector: s => { if (!dom.has(s)) dom.set(s, new Element()); return dom.get(s); } },
     performance: { now: () => time }, Date: { now: () => 1700000000000 + time },
     localStorage: { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) },
     requestAnimationFrame: f => frame = f, addEventListener: win.addEventListener.bind(win) });
@@ -45,6 +48,7 @@ async function game(THREE, baseline) {
     pointer(world, button=2, shiftKey=false) { const screen=new THREE.Vector3(...world).project(s.camera);s.renderer.domElement.dispatchEvent({type:'pointerdown',clientX:(screen.x+1)*640,clientY:(1-screen.y)*400,button,shiftKey});win.dispatchEvent({type:'pointerup',button}); },
     release: code => win.dispatchEvent({type:'keyup',code}),
     async call(file, name, ...args) { const m = load(path.join(root,'src',file+'.js')); if(m.status==='unlinked')await m.link(linker); if(m.status==='linked')await m.evaluate(); return m.namespace[name](...args); } };
+  if(!baseline)await api.call('lobby','launchTraining');
   api.tick(); return api;
 }
 
@@ -53,7 +57,8 @@ const snapshot = g => JSON.parse(JSON.stringify({ mode:g.s.mode, order:g.s.order
   units:[...g.s.enemies,...g.s.alliedMinions].map(e=>({hp:e.hp,alive:e.alive,pos:e.group.position.toArray(),visible:e.group.visible,bar:e.hpBar&&{visible:e.hpBar.root.visible,width:e.hpBar.fill.scale.x,color:e.hpBar.fillMat.color.getHex()}})),
   result:['#resultGrade','#resultTitle','#resultScore','#resultStats','#resultDiagnosis'].map(k=>({text:g.dom.get(k).textContent,html:g.dom.get(k).innerHTML})), history:g.store.get('lolMicroLabResults') }));
 
-(async()=>{
+module.exports={game};
+if(require.main===module)(async()=>{
   if (!process.argv[2]) throw Error('Pass a local Three.js 0.180.0 three.module.js path.');
   const THREE = await import(pathToFileURL(path.resolve(process.argv[2])));
   const checks=[];
@@ -84,7 +89,7 @@ const snapshot = g => JSON.parse(JSON.stringify({ mode:g.s.mode, order:g.s.order
   start();s.player.position.set(0,0,0);s.mainDummy.group.position.set(10,0,3);s.laneData.nextAttack=Infinity;const mesh=new THREE.Mesh(new THREE.SphereGeometry(.22),new THREE.MeshBasicMaterial());mesh.position.set(-1,.35,0);s.scene.add(mesh);s.laneData.shots.push({mesh,direction:new THREE.Vector3(1,0,0),config:{speed:40,damage:10},traveled:0});g.tick();assert.equal(s.playerHp,90);assert.equal(s.laneData.shots.length,0);pass('swept collision catches shots crossing the player on a slow frame');
   start();warning();s.playerHp=0;g.tick();assert.equal(s.mode,'FREE');assert(g.dom.get('#resultPanel').classList.contains('show'));assert.equal(g.dom.get('#resultTitle').textContent,'LANE');assert.equal(s.laneData,null);pass('death ends lane and shows result with cleanup');
   start();s.cs=8;s.missedCs=2;s.laneMetrics={fired:5,hit:1,dodged:4,damage:10};s.playerHp=90;s.modeData.time=.01;g.tick();assert.equal(s.mode,'FREE');assert(g.dom.get('#resultStats').innerHTML.includes('HARASS HIT'));assert(g.store.get('lolMicroLabResults').includes('LANE'));pass('timer completion saves lane-specific CS/harass/HP result');
-  start();g.key('Escape');assert.equal(s.mode,'FREE');assert.equal(s.laneData,null);pass('Escape cleans lane state');
+  start();g.key('Escape');assert(s.menuOpen);const remaining=s.modeData.time;g.tick(100);assert.equal(s.modeData.time,remaining);await g.call('lobby','launchTraining');assert(!s.menuOpen);pass('Escape opens selection and pauses simulation; launch resets the session');
   // No-CS sessions cannot score highly by standing out of range.
   start();s.modeData.time=.01;g.tick();assert(g.dom.get('#resultScore').textContent.includes('PERFORMANCE 0/100'));pass('zero-CS session scores zero');
   fs.writeFileSync(path.join(root,'LANE-TEST-RESULTS.json'),JSON.stringify({checks,renderer:'stubbed; actual Three.js math and scene graph',passed:checks.length},null,2));

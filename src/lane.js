@@ -3,6 +3,9 @@ import { state } from './state.js';
 import { edgeDistance } from './combat.js';
 import { makeMinionHpBar, updateMinionHpBar } from './minions.js';
 import { toast } from './ui.js';
+import { setEnemyAppearance } from './entities.js';
+import { championProjectile, disposeObject } from './champions.js';
+import { championById } from './roster.js';
 
 const SETTINGS = [
   { windup: .75, interval: 3, speed: 7.2, damage: 8, movement: 1.3 },
@@ -14,8 +17,7 @@ const HIT_RADIUS = .72;
 
 function removeMesh(mesh) {
   state.scene.remove(mesh);
-  mesh.geometry.dispose();
-  mesh.material.dispose();
+  disposeObject(mesh);
 }
 
 export function resetLane() {
@@ -27,7 +29,8 @@ export function resetLane() {
 
 export function startLane() {
   const enemy = state.mainDummy;
-  enemy.name = 'LANE OPPONENT';
+  if(state.selectedChampion)setEnemyAppearance(enemy,'Ezreal');
+  enemy.name = state.selectedChampion?'エズリアル · 練習用':'LANE OPPONENT';
   enemy.type = 'champion';
   enemy.hp = enemy.maxHp = 700;
   enemy.group.position.set(9, 0, 3);
@@ -59,8 +62,9 @@ function releaseShot() {
   const warning = state.laneData.warning;
   removeMesh(warning.mesh);
   state.laneData.warning = null;
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa25c }));
+  const mesh = state.selectedChampion?championProjectile(championById('Ezreal')):new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa25c }));
   mesh.position.copy(warning.origin);
+  mesh.lookAt(warning.origin.clone().add(warning.direction));
   state.scene.add(mesh);
   state.laneData.shots.push({ mesh, direction: warning.direction, config: warning.config, traveled: 0 });
   state.laneMetrics.fired++;

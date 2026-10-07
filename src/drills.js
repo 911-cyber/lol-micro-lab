@@ -5,6 +5,9 @@ import { resetEntities, createEnemy, livingEnemies } from './entities.js';
 import { spawnWave } from './minions.js';
 import { resetLane, startLane } from './lane.js';
 import { toast, hideResult, showResult } from './ui.js';
+import { buildArena } from './arena.js';
+import { startCoach } from './coach.js';
+import { disposeObject } from './champions.js';
 export function resetStats() {
   state.hits = 0;
   state.cancels = 0;
@@ -36,7 +39,13 @@ export function setMode(next, opts = {}) {
   const keepStats = !!opts.keepStats,
     keepResult = !!opts.keepResult;
   state.mode = next;
+  if(next!==state.MODE.FREE&&state.lobbyMode)state.lobbyMode=next;
   resetLane();
+  if(keepResult&&next===state.MODE.FREE){
+    state.order={type:'idle',point:state.player.position.clone(),target:null};state.attackState='idle';state.attackTarget=null;
+    state.modeBanner.textContent=`${opts.complete} COMPLETE`;state.objectiveBanner.textContent='結果の助言を確認して、同じ練習かモード選択へ。';
+    return;
+  }
   resetEntities();
   if (!keepStats) resetStats();
   if (!keepResult) hideResult();
@@ -47,9 +56,12 @@ export function setMode(next, opts = {}) {
   };
   state.attackState = 'idle';
   state.attackTarget = null;
-  state.projectiles.splice(0).forEach(p => state.scene.remove(p.mesh));
+  state.attackMoveArmed = false;state.rightMouseHeld=false;state.awaitingKiteMove=false;state.lastShotAt=-Infinity;
+  state.nextAttackReady = performance.now()/1000;state.reloadUntil=0;state.championShots=0;
+  state.projectiles.splice(0).forEach(p => {state.scene.remove(p.mesh);if(state.selectedChampion)disposeObject(p.mesh);});
   state.skillshots.splice(0).forEach(s => state.scene.remove(s.mesh));
   state.player.position.set(-4, 0, 2);
+  if(state.selectedChampion&&!opts.keepResult){buildArena(next);startCoach();}
   if (state.mode === state.MODE.FREE) {
     state.modeBanner.textContent = opts.complete ? `${opts.complete} COMPLETE` : 'FREE MODE';
     state.objectiveBanner.textContent = opts.complete ? 'リザルトを確認。1〜7で次の練習を開始' : '1 KITE • 2 TARGET • 3 SPACE • 4 DODGE • 5 CS • 6 COMBO • 7 LANE';
