@@ -38,7 +38,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 game.appendChild(renderer.domElement);
 
-// Camera v1.0 — locked from the approved pass.
 const CAMERA_FOV = 35;
 const CAMERA_PITCH_DEG = 56;
 const CAMERA_DISTANCE = 30;
@@ -49,7 +48,6 @@ const WORLD_UNITS_PER_LOL_UNIT = 0.01;
 const MOVE_SPEED = 335 * WORLD_UNITS_PER_LOL_UNIT;
 const HOLD_MOVE_INTERVAL_MS = 70;
 
-// Combat values are placeholders to be tuned later as requested.
 const ATTACK_RANGE = 550 * WORLD_UNITS_PER_LOL_UNIT;
 const ATTACK_SPEED = 0.75;
 const ATTACK_INTERVAL = 1 / ATTACK_SPEED;
@@ -109,12 +107,22 @@ const player = makeChampion(); player.position.set(-4,0,2); scene.add(player);
 
 const enemyColors = [0xd95762,0xe28b50,0x9e62df,0xd95762,0x8a5a4b,0x8a5a4b,0x8a5a4b];
 const enemies = [];
+const alliedMinions = [];
+const minionProjectiles = [];
 function createEnemy(name,x,z,color=0xd95762,maxHp=700,radius=.76,type='dummy'){
   const group = makeChampion(color,0x69232b); group.position.set(x,0,z); group.scale.setScalar(type==='minion'?.62:1.05); scene.add(group);
   const hitbox = new THREE.Mesh(new THREE.SphereGeometry(type==='minion'?.85:1.25,14,10), new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
   hitbox.position.y=.85; group.add(hitbox);
-  const e={name,group,hitbox,hp:maxHp,maxHp,radius,type,alive:true,respawnAt:0,velocity:new THREE.Vector3(),aiClock:Math.random()*4,lastHitIndicator:null,hpBar:null};
+  const e={name,group,hitbox,hp:maxHp,maxHp,radius,type,team:'enemy',alive:true,respawnAt:0,velocity:new THREE.Vector3(),aiClock:Math.random()*4,lastHitIndicator:null,hpBar:null,nextAttack:0,minionClass:null};
   enemies.push(e); return e;
+}
+
+function createAlliedMinion(name,x,z,maxHp=320,radius=.48,minionClass='melee'){
+  const color=minionClass==='melee'?0x4d82c8:0x637ccf;
+  const group=makeChampion(color,0x24456f); group.position.set(x,0,z); group.scale.setScalar(minionClass==='melee'?.62:.55); scene.add(group);
+  const unit={name,group,hp:maxHp,maxHp,radius,type:'minion',team:'ally',alive:true,nextAttack:0,minionClass,hpBar:null};
+  alliedMinions.push(unit);
+  return unit;
 }
 
 const mainDummy = createEnemy('TRAINING DUMMY',8,-2,enemyColors[0],700,.76,'dummy');
@@ -136,6 +144,8 @@ let targetFlash=0;
 const projectiles=[];
 const projectileGeom=new THREE.SphereGeometry(.13,10,8);
 const projectileMat=new THREE.MeshBasicMaterial({color:0xffe091});
+const allyMinionProjectileMat=new THREE.MeshBasicMaterial({color:0x79bfff});
+const enemyMinionProjectileMat=new THREE.MeshBasicMaterial({color:0xff737d});
 const skillshots=[];
 const skillGeom=new THREE.SphereGeometry(.22,10,8);
 const skillMat=new THREE.MeshBasicMaterial({color:0x79d8ff});
@@ -211,6 +221,9 @@ function updateOrder(dt,now){
 
 function resetEntities(){
   for(const e of enemies){if(e!==mainDummy){scene.remove(e.group);if(e.lastHitIndicator)scene.remove(e.lastHitIndicator);if(e.hpBar)scene.remove(e.hpBar.root);}}
+  for(const a of alliedMinions){scene.remove(a.group);if(a.hpBar)scene.remove(a.hpBar.root);}
+  alliedMinions.splice(0);
+  minionProjectiles.splice(0).forEach(p=>scene.remove(p.mesh));
   enemies.splice(1);
   mainDummy.alive=true;mainDummy.group.visible=true;mainDummy.hp=mainDummy.maxHp=700;mainDummy.type='dummy';mainDummy.name='TRAINING DUMMY';mainDummy.radius=.76;mainDummy.group.scale.setScalar(1.05);mainDummy.group.position.set(8,0,-2);mainDummy.velocity.set(0,0,0);mainDummy.lastHitIndicator=null;mainDummy.hpBar=null;
   activeTarget=mainDummy;dangerRing.visible=false;rangeRing.visible=false;
@@ -244,7 +257,7 @@ function setMode(next,opts={}){
   if(mode===MODE.TARGET){modeBanner.textContent='TARGET SWITCH — 30s';objectiveBanner.textContent='A→クリックでカーソルに近い敵を素早く切り替える';mainDummy.group.position.set(6,0,-3);createEnemy('ORANGE DUMMY',10,2,enemyColors[1],420,.76);createEnemy('PURPLE DUMMY',5,5,enemyColors[2],420,.76);mainDummy.hp=mainDummy.maxHp=420;modeData.time=30;sessionDuration=30;rangeRing.visible=true;}
   if(mode===MODE.SPACING){modeBanner.textContent='SPACING — 30s';objectiveBanner.textContent='黄色い自分の射程内、赤い敵の危険範囲外を維持';mainDummy.group.position.set(5.7,0,-1);modeData.time=30;sessionDuration=30;rangeRing.visible=true;dangerRing.visible=true;}
   if(mode===MODE.DODGE){modeBanner.textContent='DODGE — 30s';objectiveBanner.textContent='青いスキルショットを避ける。被弾でHPとスコア減';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=30;sessionDuration=30;modeData.nextSpawn=.45;}
-  if(mode===MODE.CS){modeBanner.textContent='CS / LAST HIT — 45s';objectiveBanner.textContent='頭上HPバーを見てラストヒット。白リングは補助';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=45;sessionDuration=45;spawnWave();}
+  if(mode===MODE.CS){modeBanner.textContent='CS / LAST HIT — 45s';objectiveBanner.textContent='味方/敵ミニオンが実際に殴り合う。赤HPバーを見てラストヒット';mainDummy.group.visible=false;mainDummy.alive=false;modeData.time=45;sessionDuration=45;spawnWave();}
   if(mode===MODE.COMBINED){modeBanner.textContent='KITE + DODGE — 40s';objectiveBanner.textContent='AA→移動を維持しながら青いスキルショットも避ける';mainDummy.group.position.set(8,0,-1);modeData.time=40;sessionDuration=40;modeData.nextSpawn=.65;rangeRing.visible=true;}
   toast(`${mode} START — ${difficulty().name}`,'info');
 }
@@ -278,34 +291,81 @@ function updateDodgeMode(dt){
   for(let i=skillshots.length-1;i>=0;i--){const s=skillshots[i];s.life-=dt;s.mesh.position.addScaledVector(s.vel,dt);const d=s.mesh.position.distanceTo(player.position.clone().setY(.35));if(d<.72){skillshotsHit++;playerHp=Math.max(0,playerHp-14);score=Math.max(0,score-70);toast('Skillshot hit','bad');scene.remove(s.mesh);skillshots.splice(i,1);continue;}if(s.life<=0||Math.abs(s.mesh.position.x)>24||Math.abs(s.mesh.position.z)>18){dodges++;score+=35;scene.remove(s.mesh);skillshots.splice(i,1);}}
 }
 
-function makeMinionHpBar(e){
+function makeMinionHpBar(unit){
   const root=new THREE.Group();
-  const bg=new THREE.Sprite(new THREE.SpriteMaterial({color:0x101820,transparent:true,opacity:.96,depthTest:false,depthWrite:false}));
-  const fillMat=new THREE.SpriteMaterial({color:0x54d66f,transparent:true,opacity:1,depthTest:false,depthWrite:false});
+  const bg=new THREE.Sprite(new THREE.SpriteMaterial({color:0x0a0d12,transparent:true,opacity:.98,depthTest:false,depthWrite:false}));
+  const fillColor=unit.team==='ally'?0x4b9cff:0xd93e4b;
+  const fillMat=new THREE.SpriteMaterial({color:fillColor,transparent:true,opacity:1,depthTest:false,depthWrite:false});
   const fill=new THREE.Sprite(fillMat);
-  bg.scale.set(1.55,.18,1);fill.scale.set(1.42,.105,1);bg.renderOrder=30;fill.renderOrder=31;root.add(bg,fill);scene.add(root);e.hpBar={root,bg,fill,fillMat};updateMinionHpBar(e);
+  bg.scale.set(1.64,.155,1);fill.scale.set(1.49,.088,1);bg.renderOrder=30;fill.renderOrder=31;root.add(bg,fill);scene.add(root);unit.hpBar={root,bg,fill,fillMat};updateMinionHpBar(unit);
 }
-function updateMinionHpBar(e){
-  if(!e.hpBar)return;const ratio=Math.max(0,Math.min(1,e.hp/e.maxHp));const y=e.maxHp===320?1.82:1.68;e.hpBar.root.position.set(e.group.position.x,y,e.group.position.z);e.hpBar.root.visible=mode===MODE.CS&&e.alive&&e.group.visible;e.hpBar.fill.scale.x=1.42*ratio;e.hpBar.fill.position.x=-.71*(1-ratio);e.hpBar.fillMat.color.setHex(ratio>.55?0x53d66e:ratio>.28?0xe0b94f:0xd94b52);
+function updateMinionHpBar(unit){
+  if(!unit.hpBar)return;
+  const ratio=Math.max(0,Math.min(1,unit.hp/unit.maxHp));
+  const y=unit.minionClass==='melee'||unit.maxHp===320?1.82:1.68;
+  unit.hpBar.root.position.set(unit.group.position.x,y,unit.group.position.z);
+  unit.hpBar.root.visible=mode===MODE.CS&&unit.alive&&unit.group.visible;
+  unit.hpBar.fill.scale.x=1.49*ratio;
+  unit.hpBar.fill.position.x=-.745*(1-ratio);
 }
 
 function makeLastHitIndicator(e){const ring=new THREE.Mesh(new THREE.RingGeometry(.62,.73,36),new THREE.MeshBasicMaterial({color:0xf5f0d0,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.06;scene.add(ring);e.lastHitIndicator=ring;}
 function spawnWave(){
   modeData.wave++;
-  const xs=[2.0,3.5,5.0,7.2,8.6,10.0];
-  for(let i=0;i<6;i++){const melee=i<3;const e=createEnemy(`${melee?'MELEE':'CASTER'} MINION`,xs[i],0,(melee?0xb45a52:0x9b6ec7),melee?320:220,melee?.48:.42,'minion');e.group.position.z=(i%2?1.2:-.9)+(i>=3?1.4:0);e.group.scale.setScalar(melee?.62:.55);e.hp=e.maxHp;makeLastHitIndicator(e);makeMinionHpBar(e);}
+  for(const e of enemies.slice(1)){scene.remove(e.group);if(e.lastHitIndicator)scene.remove(e.lastHitIndicator);if(e.hpBar)scene.remove(e.hpBar.root);}
+  enemies.splice(1);
+  for(const a of alliedMinions){scene.remove(a.group);if(a.hpBar)scene.remove(a.hpBar.root);}
+  alliedMinions.splice(0);
+  minionProjectiles.splice(0).forEach(p=>scene.remove(p.mesh));
+
+  const enemyXs=[5.8,7.0,8.2,7.2,8.5,9.8];
+  const allyXs=[-.8,-2.0,-3.2,-2.2,-3.5,-4.8];
+  const zOffsets=[-.9,.15,1.2,-1.8,-.55,.75];
+  for(let i=0;i<6;i++){
+    const melee=i<3, cls=melee?'melee':'caster', hp=melee?320:220;
+    const e=createEnemy(`${melee?'MELEE':'CASTER'} MINION`,enemyXs[i],zOffsets[i],melee?0xb45a52:0xa56b73,hp,melee?.48:.42,'minion');
+    e.minionClass=cls;e.group.scale.setScalar(melee?.62:.55);e.hp=e.maxHp;makeLastHitIndicator(e);makeMinionHpBar(e);
+    const a=createAlliedMinion(`ALLY ${melee?'MELEE':'CASTER'}`,allyXs[i],zOffsets[i]*.9,hp,melee?.48:.42,cls);makeMinionHpBar(a);
+  }
+}
+function livingAlliedMinions(){return alliedMinions.filter(a=>a.alive&&a.group.visible);}
+function nearestUnit(origin,units){let best=null,bestD=Infinity;for(const u of units){const d=origin.distanceToSquared(u.group.position);if(d<bestD){bestD=d;best=u;}}return best;}
+function laneUnitStats(unit){return unit.minionClass==='caster'?{range:4.25,move:1.05,interval:1.45,damage:16}:{range:.92,move:1.25,interval:1.20,damage:22};}
+function damageLaneUnit(unit,amount,now,sourceTeam){
+  if(!unit?.alive)return;
+  unit.hp=Math.max(0,unit.hp-amount);
+  if(unit.hp>0)return;
+  unit.alive=false;unit.group.visible=false;if(unit.hpBar)unit.hpBar.root.visible=false;
+  if(unit.team==='enemy'){
+    if(unit.lastHitIndicator)unit.lastHitIndicator.visible=false;
+    if(sourceTeam==='ally'){missedCs++;score=Math.max(0,score-18);}
+  }
+}
+function launchMinionProjectile(attacker,target,damage){
+  const mat=attacker.team==='ally'?allyMinionProjectileMat:enemyMinionProjectileMat;
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(.08,8,6),mat.clone());mesh.position.copy(attacker.group.position).add(new THREE.Vector3(0,.72,0));scene.add(mesh);
+  minionProjectiles.push({mesh,target,damage,sourceTeam:attacker.team,speed:9.5});
+}
+function updateMinionProjectiles(dt,now){
+  for(let i=minionProjectiles.length-1;i>=0;i--){const p=minionProjectiles[i],t=p.target;if(!t?.alive){scene.remove(p.mesh);minionProjectiles.splice(i,1);continue;}const aim=t.group.position.clone().add(new THREE.Vector3(0,.65,0));const delta=aim.sub(p.mesh.position),dist=delta.length(),step=p.speed*dt;if(dist<=step+.12){scene.remove(p.mesh);minionProjectiles.splice(i,1);damageLaneUnit(t,p.damage,now,p.sourceTeam);}else p.mesh.position.addScaledVector(delta.normalize(),step);}
+}
+function updateLaneMinion(unit,opponents,dt,now){
+  if(!unit.alive)return;
+  const target=nearestUnit(unit.group.position,opponents);if(!target)return;
+  const st=laneUnitStats(unit);const delta=new THREE.Vector3().subVectors(target.group.position,unit.group.position);delta.y=0;const dist=delta.length();
+  if(dist>st.range){delta.normalize();unit.group.position.addScaledVector(delta,Math.min(st.move*dt,dist-st.range));unit.group.lookAt(unit.group.position.x+delta.x,0,unit.group.position.z+delta.z);}
+  else if(now>=unit.nextAttack){unit.nextAttack=now+st.interval*(1.04-Math.min(.12,(difficultyIndex)*.04));unit.group.lookAt(target.group.position.x,0,target.group.position.z);if(unit.minionClass==='caster')launchMinionProjectile(unit,target,st.damage);else damageLaneUnit(target,st.damage,now,unit.team);}
 }
 function updateCsMode(dt,now){
   if(mode!==MODE.CS)return;
-  const minions=livingEnemies().filter(e=>e.type==='minion');
-  if(!minions.length&&modeData.time>1){spawnWave();return;}
-  for(const e of minions){
-    // Simulated allied damage creates a last-hit timing window; not a full SR wave simulation yet.
-    const drain=(e.maxHp===320?20:17)*difficulty().csDrain*dt*(.75+Math.sin(now*1.7+e.group.position.x)*.18);
-    e.hp=Math.max(0,e.hp-drain);
-    if(e.lastHitIndicator){e.lastHitIndicator.position.set(e.group.position.x,.06,e.group.position.z);e.lastHitIndicator.visible=e.hp>0&&e.hp<=ATTACK_DAMAGE;}updateMinionHpBar(e);
-    if(e.hp<=0&&e.alive){missedCs++;killEnemy(e,now,false);score=Math.max(0,score-18);}
-  }
+  const enemyMinions=livingEnemies().filter(e=>e.type==='minion');
+  const allies=livingAlliedMinions();
+  if(!enemyMinions.length&&modeData.time>1){spawnWave();return;}
+  for(const a of allies)updateLaneMinion(a,enemyMinions,dt,now);
+  for(const e of enemyMinions)updateLaneMinion(e,allies,dt,now);
+  updateMinionProjectiles(dt,now);
+  for(const e of enemyMinions){if(e.lastHitIndicator){e.lastHitIndicator.position.set(e.group.position.x,.06,e.group.position.z);e.lastHitIndicator.visible=e.hp>0&&e.hp<=ATTACK_DAMAGE;}updateMinionHpBar(e);}
+  for(const a of allies)updateMinionHpBar(a);
 }
 
 function updateModeTimer(dt){
