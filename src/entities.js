@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { rayFromScreen } from './camera.js';
 import { makeChampion } from './scene.js';
+import { buildChampion, disposeObject } from './champions.js';
+import { championById } from './roster.js';
+export function setEnemyAppearance(enemy,id=null) {
+  const previous=enemy.group,position=previous.position.clone();
+  previous.remove(enemy.hitbox);state.scene.remove(previous);disposeObject(previous);
+  enemy.group=id?buildChampion(championById(id),'enemy'):makeChampion(0xd95762,0x69232b);
+  enemy.group.position.copy(position);enemy.group.scale.setScalar(1.05);enemy.group.add(enemy.hitbox);state.scene.add(enemy.group);
+}
 export function createEnemy(name, x, z, color = 0xd95762, maxHp = 700, radius = .76, type = 'dummy') {
   const group = makeChampion(color, 0x69232b);
   group.position.set(x, 0, z);
@@ -74,6 +82,7 @@ export function pickEnemy(x, y) {
   return best;
 }
 export function resetEntities() {
+  if(state.mainDummy.group.userData.profile)setEnemyAppearance(state.mainDummy);
   for (const e of state.enemies) {
     if (e !== state.mainDummy) {
       state.scene.remove(e.group);
@@ -109,7 +118,7 @@ export function resetEntities() {
   state.rangeRing.visible = false;
 }
 export function respawnEnemies(now) {
-  if (state.mode === state.MODE.CS || state.mode === state.MODE.LANE) return;
+  if (state.mode === state.MODE.CS || state.mode === state.MODE.LANE || state.mode === state.MODE.DODGE) return;
   for (const e of state.enemies) {
     if (e.alive || now < e.respawnAt) continue;
     e.alive = true;

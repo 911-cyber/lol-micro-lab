@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 export function clampFocus() {
-  state.cameraFocus.x = THREE.MathUtils.clamp(state.cameraFocus.x, -34, 34);
-  state.cameraFocus.z = THREE.MathUtils.clamp(state.cameraFocus.z, -25, 25);
+  state.cameraFocus.x = THREE.MathUtils.clamp(state.cameraFocus.x, state.arenaBounds?.minX ?? -34, state.arenaBounds?.maxX ?? 34);
+  state.cameraFocus.z = THREE.MathUtils.clamp(state.cameraFocus.z, state.arenaBounds?.minZ ?? -25, state.arenaBounds?.maxZ ?? 25);
 }
 export function getCameraOffset() {
   const p = THREE.MathUtils.degToRad(state.CAMERA_PITCH_DEG),

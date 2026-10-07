@@ -6,9 +6,11 @@ import { issueAttackMove, issueAttack } from './combat.js';
 import { pickEnemy } from './entities.js';
 import { cycleDifficulty, setMode } from './drills.js';
 import { toast } from './ui.js';
+import { openLobby } from './lobby.js';
 export function bindInput() {
   state.renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   state.renderer.domElement.addEventListener('pointerdown', e => {
+    if(state.menuOpen||state.resultPanel.classList.contains('show'))return;
     state.pointerPx.set(e.clientX, e.clientY);
     if (e.button === 2) {
       e.preventDefault();
@@ -35,6 +37,7 @@ export function bindInput() {
     }
   });
   state.renderer.domElement.addEventListener('pointermove', e => {
+    if(state.menuOpen||state.resultPanel.classList.contains('show'))return;
     state.pointerPx.set(e.clientX, e.clientY);
     state.pointerInside = true;
     if (state.rightMouseHeld && performance.now() - state.lastMoveIssueMs >= state.HOLD_MOVE_INTERVAL_MS) {
@@ -73,6 +76,7 @@ export function bindInput() {
     state.renderer.domElement.style.cursor = '';
   });
   state.renderer.domElement.addEventListener('wheel', e => {
+    if(state.menuOpen)return;
     e.preventDefault();
     const factor = e.deltaY > 0 ? 1.10 : .90;
     state.cameraSettings.zoom = THREE.MathUtils.clamp(state.cameraSettings.zoom * factor, state.cameraSettings.minZoom, state.cameraSettings.maxZoom);
@@ -80,6 +84,10 @@ export function bindInput() {
     passive: false
   });
   window.addEventListener('keydown', e => {
+    if(e.code==='Escape'){e.preventDefault();openLobby();return;}
+    if(['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target?.tagName))return;
+    if(e.code==='KeyM'){e.preventDefault();openLobby();return;}
+    if(state.menuOpen)return;
     if (e.code === 'Space') {
       e.preventDefault();
       if (!state.spaceHeld) state.cameraFocus.copy(state.player.position);
@@ -115,7 +123,6 @@ export function bindInput() {
       if (e.code === 'Digit5') setMode(state.MODE.CS);
       if (e.code === 'Digit6') setMode(state.MODE.COMBINED);
       if (e.code === 'Digit7') setMode(state.MODE.LANE);
-      if (e.code === 'Escape') setMode(state.MODE.FREE);
     }
   });
   window.addEventListener('keyup', e => {

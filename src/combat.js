@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { clampPoint, facePoint, moveToward, moveTowardTarget } from './player.js';
 import { livingEnemies } from './entities.js';
 import { toast, flashTarget, showMarker } from './ui.js';
+import { championProjectile, disposeObject } from './champions.js';
 export function edgeDistance(e) {
   return Math.max(0, state.player.position.distanceTo(e.group.position) - state.PLAYER_RADIUS - e.radius);
 }
@@ -77,13 +78,20 @@ export function launchProjectile(e, now) {
   state.attackTarget = null;
   state.lastShotAt = now;
   state.awaitingKiteMove = true;
-  const mesh = new THREE.Mesh(state.projectileGeom, state.projectileMat.clone());
+  state.championShots = (state.championShots || 0) + 1;
+  const mesh = state.selectedChampion ? championProjectile(state.selectedChampion) : new THREE.Mesh(state.projectileGeom, state.projectileMat.clone());
   mesh.position.copy(state.player.position).add(new THREE.Vector3(0, 1.05, 0));
   state.scene.add(mesh);
   state.projectiles.push({
     mesh,
-    target: e
+    target: e,
+    damage: state.ATTACK_DAMAGE * (state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0 ? 1.5 : 1)
   });
+  if(state.selectedChampion?.id === 'Jhin' && state.championShots % 4 === 0) {
+    state.reloadUntil = now + 2.5;
+    state.nextAttackReady = Math.max(state.nextAttackReady,state.reloadUntil);
+    toast('リロード — この時間に移動しよう','info');
+  }
 }
 export function killEnemy(e, now, fromPlayer = true) {
   e.alive = false;
@@ -110,18 +118,21 @@ export function updateProjectiles(dt, now) {
       e = p.target;
     if (!e?.alive) {
       state.scene.remove(p.mesh);
+      if(state.selectedChampion)disposeObject(p.mesh);
       state.projectiles.splice(i, 1);
       continue;
     }
     const aim = e.group.position.clone().add(new THREE.Vector3(0, .9, 0));
-    const delta = aim.sub(p.mesh.position),
+    const delta = new THREE.Vector3().subVectors(aim,p.mesh.position),
       dist = delta.length(),
       step = state.PROJECTILE_SPEED * dt;
     if (dist <= step + .18) {
       state.scene.remove(p.mesh);
+      if(state.selectedChampion)disposeObject(p.mesh);
       state.projectiles.splice(i, 1);
-      damageEnemy(e, state.ATTACK_DAMAGE, now, true);
+      damageEnemy(e, p.damage ?? state.ATTACK_DAMAGE, now, true);
     } else {
+      p.mesh.lookAt(aim);
       p.mesh.position.addScaledVector(delta.normalize(), step);
     }
   }

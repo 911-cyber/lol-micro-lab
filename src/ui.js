@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { state } from './state.js';
+import { resultObservation } from './coach.js';
 export function showMarker(point, color = 0x55e36f) {
   state.markerMaterial.color.setHex(color);
   state.orderMarker.position.set(point.x, .065, point.z);
@@ -122,15 +123,18 @@ export function showResult(finished) {
     const dodgeRate = state.laneMetrics.dodged / Math.max(1, resolved);
     performance = clamp100((csRate * 65 + hpRate * 20 + dodgeRate * 15) * Math.min(1, total / 6));
     stats = [['CS', state.cs], ['MISS', state.missedCs], ['CS RATE', `${Math.round(csRate * 100)}%`], ['HARASS HIT', state.laneMetrics.hit], ['DODGED', state.laneMetrics.dodged], ['HP', `${Math.round(state.playerHp)}%`]];
-    diagnosis = hpRate < .4 ? 'CSに集中して被弾が増えている。予告線が出たら横移動を優先しよう。' : csRate < .6 ? '回避しながら赤HPバーを確認。倒せる瞬間にAAを1発だけ入れよう。' : 'CSと回避を両立できている。難易度を上げて同じ精度を維持しよう。';
+    diagnosis = hpRate < .4 ? '残りHPが少ない。予告線が出たら横移動を優先し、CSへ戻ろう。' : csRate < .6 ? '回避しながら赤HPバーを確認。倒せる瞬間にAAを1発だけ入れよう。' : 'CSと回避を両立できている。難易度を上げて同じ精度を維持しよう。';
   }
   recordResult(finished, performance);
+  const observed=document.querySelector('#resultObservation');observed.hidden=!state.coachEnabled;observed.textContent=resultObservation(finished);
+  if(state.coachEnabled&&state.selectedChampion)diagnosis+=' 次の練習：'+state.selectedChampion.tip;
   state.resultGradeEl.textContent = gradeFor(performance);
   state.resultTitleEl.textContent = finished;
   state.resultScoreEl.textContent = `PERFORMANCE ${performance}/100 • SCORE ${Math.round(state.score)} • ${state.difficulty().name}`;
   state.resultStatsEl.innerHTML = stats.map(([a, b]) => statCard(a, b)).join('');
   state.resultDiagnosisEl.textContent = diagnosis + weakestHistoryText();
   state.resultPanel.classList.add('show');
+  if(state.coachEnabled)document.querySelector('#coachMessage').textContent=diagnosis;
 }
 export function updateVisuals(dt) {
   state.rangeRing.position.set(state.player.position.x, .05, state.player.position.z);
@@ -151,6 +155,8 @@ export function updateVisuals(dt) {
 export function updateHud(now) {
   state.modeStateEl.textContent = state.mode;
   state.difficultyStateEl.textContent = state.difficulty().name;
+  const attackCycle=document.querySelector('#attackCycle');
+  if(attackCycle&&state.selectedChampion)attackCycle.textContent=state.reloadUntil>now?`リロード ${(state.reloadUntil-now).toFixed(1)}s`:state.selectedChampion.id==='Jhin'?`ウィスパー ${4-(state.championShots||0)%4} / 4発`:`${state.selectedChampion.weapon} · AD ${state.ATTACK_DAMAGE}`;
   state.orderStateEl.textContent = state.attackState === 'windup' ? 'WINDUP' : state.order.type.toUpperCase();
   state.orderStateEl.className = state.attackState === 'windup' ? 'attacking' : state.order.type === 'move' ? 'moving' : '';
   state.hitsStateEl.textContent = state.hits;
